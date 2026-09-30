@@ -1,0 +1,37 @@
+# ---- dotnet ----
+bin/
+obj/
+*.user
+*.suo
+.vs/
+[Dd]ebug/
+[Rr]elease/
+artifacts/
+
+# ---- node ----
+node_modules/
+dist/
+dist-ssr/
+*.local
+.vite/
+
+# ---- environment / secrets ----
+.env
+.env.*
+!.env.example
+appsettings.*.local.json
+secrets.*
+
+# ---- real candidate profile (keep PII out of the public repo) ----
+profile*.json
+!profile.sample.json
+
+# ---- IDE / OS ----
+.idea/
+*.swp
+.DS_Store
+Thumbs.db
+
+# ---- logs & caches ----
+*.log
+npm-debug.log*
