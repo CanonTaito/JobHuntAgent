@@ -28,13 +28,13 @@ Inference runs in the background (daily/on-demand) and results are cached.
 |-------|--------|
 | Backend | ASP.NET Core Minimal API (.NET 10) |
 | Agent orchestration | Microsoft Agent Framework (MAF) on Microsoft.Extensions.AI |
-| Local LLM | ollama — gemma3 (reasoning/JSON), nomic-embed-text (embeddings) |
+| Chat provider | ollama (default) or OpenCode Zen — one `AI__Provider` config switch; both speak the OpenAI API, wired via Microsoft.Extensions.AI.OpenAI |
 | Frontend | React + TypeScript (Vite) |
 | Persistence | EF Core + SQLite |
 | Observability | OpenTelemetry + health checks (polish phase) |
 | CI | GitHub Actions (polish phase) |
 
-LLM access is configurable to swap local ollama for OpenAI/Azure OpenAI.
+Defaults to local ollama for zero-cost, offline runs. Set `AI__Provider=zen` (plus `OPENCODE_ZEN_KEY`) to use OpenCode Zen (`big-pickle`). Caveat: Zen's free tier only answers calls made from inside opencode — external apps need a funded Console account or a local opencode server.
 
 ## Phased plan
 
@@ -45,7 +45,7 @@ A demoable end-to-end slice: paste a job description → local gemma3 → struct
 - `0.1` scaffold solution & repo conventions
 - `0.2` ASP.NET Core minimal API project
 - `0.3` React + Vite + TypeScript frontend
-- `0.4` Ollama chat client (`Microsoft.Extensions.AI`)
+- `0.4` config-switchable chat client (ollama default, OpenCode Zen optional)
 - `0.5` JD Scanner agent returning structured JSON
 - `0.6` `POST /api/scan` endpoint
 - `0.7` Scan page in React

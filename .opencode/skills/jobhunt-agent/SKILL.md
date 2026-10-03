@@ -11,7 +11,8 @@ A job-search automation agent that searches job listings, scores matches against
 
 - Backend: ASP.NET Core Minimal API on **.NET 10**.
 - Agent orchestration: **Microsoft Agent Framework (MAF)** — GA since April 2026, built on `Microsoft.Extensions.AI`. Use `chatClient.AsAIAgent()` + `FunctionInvokingChatClient` for tools; MAF workflow patterns for orchestration.
-- Local LLM via **`Microsoft.Extensions.AI.Ollama`** (zero API cost): `gemma3` for reasoning / structured JSON, `nomic-embed-text` for embeddings. Provide a config switch so OpenAI/Azure OpenAI can be swapped in later.
+- Chat provider via **`Microsoft.Extensions.AI.OpenAI` (GA v10)** — the MEAI Ollama package is not GA, so both providers are wired as OpenAI-compatible endpoints behind config: **ollama** (default, zero cost, `http://localhost:11434/v1`; `gemma3` for reasoning / structured JSON, `qwen2.5:3b` for tool calls when gemma3 lacks tools, `nomic-embed-text` for embeddings) or **OpenCode Zen** (`https://opencode.ai/zen/v1`, model `big-pickle`, API key `OPENCODE_ZEN_KEY`). Switching providers is config-only.
+  - Zen caveat: the free tier gate (403 `FreeTierError`) only allows calls made from *inside* opencode; external apps need a funded Console account or a local opencode server. Hence ollama is the default.
 - Frontend: **React + TypeScript (Vite) SPA** — never Blazor for the UI.
 - Persistence: **EF Core + SQLite**.
 - OTel tracing + health checks (polish phase).
@@ -44,7 +45,7 @@ Each phase is independently shippable. Commits are one concern each; **pause aft
 | 0.1 | `chore: scaffold solution and repo conventions` | `.gitignore`, `.editorconfig`, solution, project folders, skills, PLAN.md |
 | 0.2 | `feat: add ASP.NET Core minimal API project` | `JobHunt.Api` host (still empty of AI) |
 | 0.3 | `feat: add React+Vite+TypeScript frontend` | `JobHunt.Web` SPA scaffold |
-| 0.4 | `feat: wire Ollama chat client via Microsoft.Extensions.AI` | `AddOllamaChatClient`, config for gemma3 |
+| 0.4 | `feat: wire config-switchable chat client (ollama default, OpenCode Zen optional)` | `AiOptions` + `.env` loader + `AddChatClient` over OpenAI-compatible endpoints |
 | 0.5 | `feat: add JD Scanner agent returning structured analysis` | `AIAgent` + JSON output schema |
 | 0.6 | `feat: add POST /api/scan endpoint` | API → agent wiring |
 | 0.7 | `feat: add Scan page to React app` | paste JD → render analysis |
