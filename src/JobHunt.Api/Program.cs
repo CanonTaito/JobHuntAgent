@@ -18,4 +18,15 @@ app.MapGet("/api/ai/ping", async (IChatClient chat, CancellationToken ct) =>
     return Results.Ok(new { message = response.Text.Trim() });
 });
 
+app.MapPost("/api/scan", async (JdScannerAgent scanner, HttpRequest request, CancellationToken ct) =>
+{
+    var jd = await new StreamReader(request.Body).ReadToEndAsync(ct);
+    if (string.IsNullOrWhiteSpace(jd))
+    {
+        return Results.BadRequest(new { error = "Request body must contain the job description text." });
+    }
+
+    return Results.Ok(await scanner.ScanAsync(jd, ct));
+});
+
 app.Run();
