@@ -1,10 +1,12 @@
 using JobHunt.Api.Ai;
+using JobHunt.Api.Features.JdScan;
 using Microsoft.Extensions.AI;
 
 var builder = WebApplication.CreateBuilder(args);
 
 DotEnv.LoadInto(builder.Configuration);
 builder.Services.AddJobHuntAi(builder.Configuration);
+builder.Services.AddSingleton<JdScannerAgent>();
 
 var app = builder.Build();
 
