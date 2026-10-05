@@ -7,6 +7,7 @@
   --accent: #aa3bff;
   --accent-bg: rgba(170, 59, 255, 0.1);
   --accent-border: rgba(170, 59, 255, 0.5);
+  --danger: #b3261e;
   --social-bg: rgba(244, 243, 236, 0.5);
   --shadow:
     rgba(0, 0, 0, 0.1) 0 10px 15px -3px, rgba(0, 0, 0, 0.05) 0 4px 6px -2px;
@@ -40,6 +41,7 @@
     --accent: #c084fc;
     --accent-bg: rgba(192, 132, 252, 0.15);
     --accent-border: rgba(192, 132, 252, 0.5);
+    --danger: #f2b8b5;
     --social-bg: rgba(47, 48, 58, 0.5);
     --shadow:
       rgba(0, 0, 0, 0.4) 0 10px 15px -3px, rgba(0, 0, 0, 0.25) 0 4px 6px -2px;
@@ -108,4 +110,170 @@ code {
   line-height: 135%;
   padding: 4px 8px;
   background: var(--code-bg);
+}
+
+h3 {
+  font-family: var(--heading);
+  font-weight: 500;
+  color: var(--text-h);
+  font-size: 15px;
+  letter-spacing: -0.1px;
+  margin: 0 0 8px;
+}
+
+/* Scan page */
+.scan {
+  width: 100%;
+  box-sizing: border-box;
+  padding: 0 32px 64px;
+  text-align: left;
+}
+
+.tagline {
+  margin: -20px 0 32px;
+}
+
+.scan-form {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.scan-label {
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--text-h);
+}
+
+.scan-input {
+  width: 100%;
+  box-sizing: border-box;
+  resize: vertical;
+  font-family: var(--sans);
+  font-size: 16px;
+  line-height: 150%;
+  color: var(--text-h);
+  background: var(--code-bg);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 12px 14px;
+}
+
+.scan-input:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 1px;
+}
+
+.scan-button {
+  align-self: flex-start;
+  font: inherit;
+  font-size: 16px;
+  font-weight: 600;
+  color: #fff;
+  background: var(--accent);
+  border: none;
+  border-radius: 8px;
+  padding: 10px 20px;
+  cursor: pointer;
+}
+
+.scan-button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.scan-status {
+  margin: 16px 0;
+  font-size: 15px;
+}
+
+.scan-status:empty {
+  margin: 0;
+}
+
+.scan-error {
+  color: var(--danger);
+}
+
+.result {
+  margin-top: 8px;
+  border-top: 1px solid var(--border);
+  padding-top: 24px;
+}
+
+.result-meta {
+  font-size: 15px;
+}
+
+.badges {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin: 16px 0;
+}
+
+.badge {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text-h);
+  background: var(--accent-bg);
+  border: 1px solid var(--accent-border);
+  border-radius: 999px;
+  padding: 4px 12px;
+}
+
+.badge-salary {
+  background: transparent;
+}
+
+.result-summary {
+  font-size: 17px;
+  line-height: 150%;
+}
+
+.result-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 24px;
+  margin-top: 32px;
+}
+
+.result-section-wide {
+  grid-column: 1 / -1;
+}
+
+.chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.chip {
+  font-family: var(--mono);
+  font-size: 14px;
+  color: var(--text-h);
+  background: var(--code-bg);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 3px 8px;
+}
+
+.result-list {
+  margin: 0;
+  padding-left: 20px;
+  font-size: 16px;
+  line-height: 150%;
+}
+
+.result-list li + li {
+  margin-top: 4px;
+}
+
+@media (max-width: 1024px) {
+  .scan {
+    padding: 0 20px 48px;
+  }
 }

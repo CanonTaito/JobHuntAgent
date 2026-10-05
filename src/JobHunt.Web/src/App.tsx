@@ -1,10 +1,7 @@
+import ScanPage from './ScanPage'
+
 function App() {
-  return (
-    <main>
-      <h1>JobHuntAgent</h1>
-      <p>Job search automation — coming soon.</p>
-    </main>
-  )
+  return <ScanPage />
 }
 
 export default App
