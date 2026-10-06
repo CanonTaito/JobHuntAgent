@@ -1,0 +1,88 @@
+{
+    "$comment": "Fictional sample profile, safe to ship in the public repo. Copy to profile.json and edit — profile.json is gitignored, so your details never enter git.",
+    "name": "Jordan Avery",
+    "headline": "Senior Software Engineer",
+    "location": "Melbourne, VIC",
+    "yearsOfExperience": 8,
+    "seniority": "Senior",
+    "summary": "Backend-leaning software engineer who enjoys owning services end to end: data model, API, tests, and the observability that keeps them healthy at 3am.",
+    "skills": [
+        "C#",
+        ".NET 10",
+        "ASP.NET Core",
+        "EF Core",
+        "SQL Server",
+        "Azure",
+        "Kafka",
+        "REST APIs",
+        "TypeScript",
+        "React",
+        "Docker",
+        "GitHub Actions"
+    ],
+    "experience": [
+        {
+            "company": "Harbour Digital",
+            "title": "Senior Software Engineer",
+            "period": "2023 – present",
+            "highlights": [
+                "Led the migration of a monolithic billing service to .NET minimal APIs, cutting p95 latency by 40%.",
+                "Introduced OpenTelemetry tracing across 12 services, reducing mean time to diagnose incidents from hours to minutes.",
+                "Mentored four graduate engineers through an internal pairing programme."
+            ]
+        },
+        {
+            "company": "Brightpath Software",
+            "title": "Software Engineer",
+            "period": "2020 – 2023",
+            "highlights": [
+                "Built the partner-integration API (ASP.NET Core + SQL Server) now handling 4M requests a week.",
+                "Rewrote the nightly batch pipeline to stream via Kafka, cutting completion time from 90 to 12 minutes."
+            ]
+        },
+        {
+            "company": "Northgate Systems",
+            "title": "Junior Developer",
+            "period": "2018 – 2020",
+            "highlights": [
+                "Shipped the first mobile-web frontend for the field-service product in React."
+            ]
+        }
+    ],
+    "education": [
+        {
+            "qualification": "Bachelor of Computer Science",
+            "institution": "RMIT University",
+            "year": 2017
+        }
+    ],
+    "highlights": [
+        "Led a billing-service migration that cut p95 latency by 40% and paid for itself in three months.",
+        "Drove adoption of OpenTelemetry across 12 services, turning 3am guesswork into five-minute diagnosis.",
+        "Owns the partner-integration API handling 4M requests a week with 99.95% availability."
+    ],
+    "preferences": {
+        "roles": [
+            "Backend Engineer",
+            "Platform Engineer",
+            "Software Engineer"
+        ],
+        "locations": [
+            "Melbourne",
+            "Remote"
+        ],
+        "workModels": [
+            "Hybrid",
+            "Remote"
+        ],
+        "employmentTypes": [
+            "Full-time",
+            "Contract"
+        ],
+        "salaryExpectation": {
+            "min": 150000,
+            "max": 185000,
+            "currency": "AUD"
+        }
+    }
+}

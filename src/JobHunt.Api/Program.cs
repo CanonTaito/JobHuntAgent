@@ -1,11 +1,13 @@
 using JobHunt.Api.Ai;
 using JobHunt.Api.Features.JdScan;
+using JobHunt.Api.Features.Profile;
 using Microsoft.Extensions.AI;
 
 var builder = WebApplication.CreateBuilder(args);
 
 DotEnv.LoadInto(builder.Configuration);
 builder.Services.AddJobHuntAi(builder.Configuration);
+builder.Services.AddCandidateProfile(builder.Configuration, builder.Environment);
 builder.Services.AddSingleton<JdScannerAgent>();
 
 var app = builder.Build();
@@ -17,6 +19,8 @@ app.MapGet("/api/ai/ping", async (IChatClient chat, CancellationToken ct) =>
     var response = await chat.GetResponseAsync("Reply with exactly: pong", options: null, ct);
     return Results.Ok(new { message = response.Text.Trim() });
 });
+
+app.MapGet("/api/profile", (CandidateProfile profile) => Results.Ok(profile));
 
 app.MapPost("/api/scan", async (JdScannerAgent scanner, HttpRequest request, CancellationToken ct) =>
 {

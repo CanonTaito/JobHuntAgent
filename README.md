@@ -85,6 +85,16 @@ All settings live under the `AI` section of `src/JobHunt.Api/appsettings.json` a
 
 The API also walks up from `src/JobHunt.Api` looking for a `.env`, so the key is picked up without extra setup.
 
+## Candidate profile
+
+The agent scores jobs against a candidate profile (Phase 1+). A fictional sample ships in the repo:
+
+- **Default:** `src/JobHunt.Api/profile.sample.json` is loaded when nothing else is found.
+- **Yours:** copy it to `src/JobHunt.Api/profile.json` and edit it — `profile*.json` is gitignored except the sample, so your details never enter git.
+- **Anywhere:** or set `Profile:Path` (env: `Profile__Path`) to any absolute or content-root-relative path.
+
+Inspect what loaded: `GET http://localhost:5051/api/profile`. Only `name` is required — every other field is optional and profession-agnostic.
+
 ## Privacy
 
 No personally identifiable information ever reaches the chat or embedding model. Starting with Phase 1, every prompt is built from placeholder-substituted text (e.g. `[NAME]`, `[EMAIL]`): the real values and the placeholder mapping are kept only locally (in-memory in Phase 1, SQLite thereafter) and re-substituted when responses come back. With the default ollama provider, everything stays on your machine. Phase 0 sends only pasted job ads, which are public content.
@@ -104,7 +114,9 @@ src/
   JobHunt.Api/            ASP.NET Core Minimal API
     Ai/                   config-switchable IChatClient wiring, .env loader
     Features/JdScan/      the JD Scanner agent + result model + JSON parser
+    Features/Profile/     candidate profile model + startup loader
     Program.cs            endpoints + DI composition root
+    profile.sample.json   fictional sample profile (profile.json is yours, gitignored)
   JobHunt.Web/            React + Vite frontend
     src/scan.ts           typed client for POST /api/scan
     src/ScanPage.tsx      the Scan page
