@@ -97,7 +97,7 @@ Inspect what loaded: `GET http://localhost:5051/api/profile`. Only `name` is req
 
 ## Privacy
 
-No personally identifiable information ever reaches the chat or embedding model. Starting with Phase 1, every prompt is built from placeholder-substituted text (e.g. `[NAME]`, `[EMAIL]`): the real values and the placeholder mapping are kept only locally (in-memory in Phase 1, SQLite thereafter) and re-substituted when responses come back. With the default ollama provider, everything stays on your machine. Phase 0 sends only pasted job ads, which are public content.
+No personally identifiable information ever reaches the chat or embedding model. Starting with Phase 1, every prompt is built from placeholder-substituted text (e.g. `[NAME]`, `[EMPLOYER_1]`): the real values and the placeholder mapping are kept only locally (in-memory in Phase 1, SQLite thereafter) and re-substituted when responses come back. The known PII values — name (plus its first/last tokens), employers, institutions, and the profile's location — are replaced wherever they appear in profile text, including free-text fields. See exactly what the model would receive via `GET /api/profile/redacted`. With the default ollama provider, everything stays on your machine. Phase 0 sends only pasted job ads, which are public content.
 
 ## Endpoints
 
@@ -105,6 +105,8 @@ No personally identifiable information ever reaches the chat or embedding model.
 |--------|-------|---------|
 | `GET` | `/` | liveness |
 | `GET` | `/api/ai/ping` | round-trips a trivial prompt through the configured chat model |
+| `GET` | `/api/profile` | the loaded candidate profile (contains your PII — for local verification) |
+| `GET` | `/api/profile/redacted` | the same profile with PII replaced by placeholders — what the LLM sees |
 | `POST` | `/api/scan` | scans a raw job description (request body = text) and returns the structured analysis |
 
 ## Layout
@@ -114,6 +116,7 @@ src/
   JobHunt.Api/            ASP.NET Core Minimal API
     Ai/                   config-switchable IChatClient wiring, .env loader
     Features/JdScan/      the JD Scanner agent + result model + JSON parser
+    Features/Pii/         PII placeholder engine (redact out, rehydrate back)
     Features/Profile/     candidate profile model + startup loader
     Program.cs            endpoints + DI composition root
     profile.sample.json   fictional sample profile (profile.json is yours, gitignored)
