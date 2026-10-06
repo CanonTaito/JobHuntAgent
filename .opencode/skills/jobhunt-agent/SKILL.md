@@ -35,6 +35,16 @@ SEEK stores an internal salary range (`ranges.minimumAmount`/`maximumAmount`) on
 - Run as **background enrichment** (daily/on-demand), cache band snapshots, validate the method against known-salary ads (their displayed range must fall inside the inferred band).
 - Rate-limit politely and cache aggressively; SEEK has no public API (undocumented search JSON) — anti-bot protection is a real risk.
 
+## PII rule (non-negotiable)
+
+**No PII ever reaches an LLM.** Not in prompts, tool results, embeddings, or logs. Enforced by placeholder substitution:
+
+1. Before any model call, every known PII value (name, contact details, address, or any identifying data) is replaced with a stable placeholder (`[NAME]`, `[EMAIL]`, `[LOCATION_1]`, `[EMPLOYER_1]`, ...).
+2. The real values + placeholder mapping live in the **database** (SQLite from 2.2; in-memory until then). Only placeholders go over the wire.
+3. Responses are **rehydrated** (placeholders → real values) before anything is persisted or shown.
+
+Owner commits: `1.2` placeholder engine (must land before `1.3`, the first commit to send profile-derived text to a model); mapping persistence in `2.2`. Job ads are public content and pass through unchanged. Applies to every Phase 1+ commit that touches model calls.
+
 ## Phased build plan
 
 Each phase is independently shippable. Commits are one concern each; **pause after every commit** for user review (see review workflow).
@@ -55,16 +65,17 @@ Each phase is independently shippable. Commits are one concern each; **pause aft
 | # | Commit | What lands |
 |---|--------|-----------|
 | 1.1 | `feat: add CandidateProfile model with sample profile` | sample/fictional profile in-repo; real one via gitignored config (`profile*.json`, see .gitignore) |
-| 1.2 | `feat: register agent tools GetProfile and ScoreJob` | `FunctionInvokingChatClient` |
-| 1.3 | `feat: add embedding similarity scoring` | `nomic-embed-text` via Ollama embedding generator |
-| 1.4 | `feat: return structured match score in API` | breakdown: skills / seniority / fit |
-| 1.5 | `feat: show match score breakdown in React UI` | score card |
+| 1.2 | `feat: add PII placeholder engine` | redact before model calls, rehydrate after; in-memory map (DB table lands in 2.2) |
+| 1.3 | `feat: register agent tools GetProfile and ScoreJob` | `FunctionInvokingChatClient`; profile text passes through 1.2 redaction |
+| 1.4 | `feat: add embedding similarity scoring` | `nomic-embed-text` via Ollama embedding generator |
+| 1.5 | `feat: return structured match score in API` | breakdown: skills / seniority / fit |
+| 1.6 | `feat: show match score breakdown in React UI` | score card |
 
 ### Phase 2 — Pipeline, job source, salary bands
 | # | Commit | What lands |
 |---|--------|-----------|
 | 2.1 | `feat: add IJobSource abstraction and in-memory source` | connector interface (`IJobSource`), mock source for demos/tests |
-| 2.2 | `feat: add Application model with EF Core SQLite` | persistence incl. `salaryBand` + `salarySource` (displayed/inferred) |
+| 2.2 | `feat: add Application model with EF Core SQLite` | persistence incl. `salaryBand` + `salarySource` (displayed/inferred); PII placeholder mapping table for 1.2 |
 | 2.3 | `feat: add discovery and scoring pipeline` | discovered → scored → persisted |
 | 2.4 | `feat: add salary band inference engine` | band-probing over a job source; grouping into bands |
 | 2.5 | `feat: add tailoring agent for resume bullets and cover letter` | draft outputs per job |
@@ -88,7 +99,7 @@ Each phase is independently shippable. Commits are one concern each; **pause aft
 | 4.5 | `ci: add GitHub Actions build and test workflow` | CI |
 | 4.6 | `docs: finalize README with architecture and demo` | recruiter-facing |
 
-~30 commits total; each one compiles and shows a visible increment.
+~31 commits total; each one compiles and shows a visible increment.
 
 ## Review workflow (how we execute)
 
@@ -103,6 +114,7 @@ Two skills enforce discipline: `jobhunt-agent` (this file, project plan) and `sm
 ## Rules
 
 - Keep real candidate PII out of the repo (gitignored `profile*.json`); ship a `.sample` profile.
+- **No PII in any LLM call** — substitute placeholders before prompts/embeddings/tool results, store real values + mapping in the database, rehydrate responses afterward (see "PII rule" above). Verify no model-call path bypasses redaction.
 - Do not auto-apply to jobs — always wait for human approval.
 - Respect SEEK rate limits / caching to avoid anti-bot blocks.
 - Verify with a build before every commit.

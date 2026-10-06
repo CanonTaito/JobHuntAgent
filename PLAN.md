@@ -22,6 +22,18 @@ Many SEEK ads say "Salary undisclosed" but still carry a hidden salary range tha
 
 Inference runs in the background (daily/on-demand) and results are cached.
 
+## Privacy: PII never reaches the LLM (hard rule)
+
+No personally identifiable information (name, contact details, street address, or any other identifying data) may appear in a prompt, tool result, embedding, or any other text sent to a chat/embedding provider.
+
+How it works:
+
+1. **Before** an LLM call, every known PII value is replaced with a stable placeholder (e.g. `[NAME]`, `[EMAIL]`, `[LOCATION_1]`, `[EMPLOYER_1]`).
+2. The **real values and the placeholder ↔ value mapping are stored in the database** (SQLite from Phase 2; an in-memory map until then) — only placeholders travel over the wire.
+3. **After** the response returns, placeholders are rehydrated back to the real values before anything is persisted or displayed.
+
+Owning commits: `1.2` (placeholder engine, lands before the first commit that sends profile-derived text to a model — `1.3`), mapping persistence in `2.2`. Job ads are public content and pass through unchanged. The default ollama provider additionally keeps everything on-machine.
+
 ## Tech stack
 
 | Piece | Choice |
@@ -54,15 +66,16 @@ A demoable end-to-end slice: paste a job description → local gemma3 → struct
 ### Phase 1 — Match scoring
 Score jobs against a candidate profile using embeddings + LLM breakdown. Commits:
 - `1.1` CandidateProfile model with a sample (fictional) profile in-repo; real profile stays gitignored
-- `1.2` agent tools `GetProfile` / `ScoreJob`
-- `1.3` embedding similarity scoring (`nomic-embed-text`)
-- `1.4` structured match score in the API
-- `1.5` score breakdown card in React
+- `1.2` PII placeholder engine — redact before any model call, rehydrate after (see Privacy section; in-memory map until 2.2 persists it)
+- `1.3` agent tools `GetProfile` / `ScoreJob` (profile text passes through 1.2 redaction)
+- `1.4` embedding similarity scoring (`nomic-embed-text`)
+- `1.5` structured match score in the API
+- `1.6` score breakdown card in React
 
 ### Phase 2 — Pipeline, job source, salary bands
 Discover → score → tailor → approve → track. Includes the salary-band engine.
 - `2.1` `IJobSource` abstraction + in-memory/mock source
-- `2.2` Application model with EF Core SQLite (`salaryBand`, `salarySource`)
+- `2.2` Application model with EF Core SQLite (`salaryBand`, `salarySource` + the PII placeholder mapping table from `1.2`)
 - `2.3` discovery + scoring pipeline
 - `2.4` **salary band inference engine** (displayed salary, or probe filters; align with the bands above)
 - `2.5` tailoring agent (resume bullets + cover-letter draft)
@@ -86,5 +99,6 @@ Discover → score → tailor → approve → track. Includes the salary-band en
 
 - Small Conventional Commits, one concern each.
 - Pause after every commit for review — you say "continue" to proceed.
+- **PII never reaches an LLM** — placeholder substitution in, rehydrate out (see the Privacy section); this gates every Phase 1+ commit that touches model calls.
 - Live Seek searching is the flagship goal; the paste-a-JD screen is only the Phase 0 proof.
 - The public repo ships a sample candidate profile; your real profile never enters git.

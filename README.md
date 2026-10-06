@@ -85,6 +85,10 @@ All settings live under the `AI` section of `src/JobHunt.Api/appsettings.json` a
 
 The API also walks up from `src/JobHunt.Api` looking for a `.env`, so the key is picked up without extra setup.
 
+## Privacy
+
+No personally identifiable information ever reaches the chat or embedding model. Starting with Phase 1, every prompt is built from placeholder-substituted text (e.g. `[NAME]`, `[EMAIL]`): the real values and the placeholder mapping are kept only locally (in-memory in Phase 1, SQLite thereafter) and re-substituted when responses come back. With the default ollama provider, everything stays on your machine. Phase 0 sends only pasted job ads, which are public content.
+
 ## Endpoints
 
 | Method | Route | Purpose |
