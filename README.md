@@ -114,7 +114,7 @@ No personally identifiable information ever reaches the chat or embedding model.
 ```
 src/
   JobHunt.Api/            ASP.NET Core Minimal API
-    Ai/                   config-switchable IChatClient wiring, .env loader
+    Ai/                   config-switchable chat + embedding wiring, .env loader
     Features/JdScan/      the JD Scanner agent + result model + JSON parser
     Features/Match/       GetProfile + ScoreJob agent tools for match scoring
     Features/Pii/         PII placeholder engine (redact out, rehydrate back)

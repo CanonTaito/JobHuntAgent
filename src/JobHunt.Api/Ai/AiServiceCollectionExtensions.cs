@@ -17,7 +17,30 @@ public static class AiServiceCollectionExtensions
             ? CreateZenChatClient(options)
             : CreateOllamaChatClient(options));
 
+        services.AddSingleton<IEmbeddingGenerator<string, Embedding<float>>>(_ =>
+            options.Provider.Equals("zen", StringComparison.OrdinalIgnoreCase)
+                ? CreateZenEmbeddingGenerator(options)
+                : CreateOllamaEmbeddingGenerator(options));
+
         return services;
+    }
+
+    private static IEmbeddingGenerator<string, Embedding<float>> CreateZenEmbeddingGenerator(AiOptions options)
+    {
+        var client = new OpenAIClient(
+            new ApiKeyCredential(options.Zen.ApiKey ?? string.Empty),
+            new OpenAIClientOptions { Endpoint = new Uri(options.Zen.Endpoint) });
+
+        return client.GetEmbeddingClient(options.Zen.EmbeddingModel).AsIEmbeddingGenerator(null);
+    }
+
+    private static IEmbeddingGenerator<string, Embedding<float>> CreateOllamaEmbeddingGenerator(AiOptions options)
+    {
+        var client = new OpenAIClient(
+            new ApiKeyCredential("ollama"),
+            new OpenAIClientOptions { Endpoint = new Uri(options.Ollama.Endpoint) });
+
+        return client.GetEmbeddingClient(options.Ollama.EmbeddingModel).AsIEmbeddingGenerator(null);
     }
 
     private static IChatClient CreateZenChatClient(AiOptions options)

@@ -14,6 +14,7 @@ builder.Services.AddPiiProtection();
 builder.Services.AddSingleton<JdScannerAgent>();
 builder.Services.AddSingleton<MatchTools>();
 builder.Services.AddSingleton<MatchAgent>();
+builder.Services.AddSingleton<EmbeddingScorer>();
 
 var app = builder.Build();
 

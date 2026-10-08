@@ -14,6 +14,7 @@ public sealed class AiOptions
     {
         public string Endpoint { get; set; } = "https://opencode.ai/zen/v1";
         public string ChatModel { get; set; } = "big-pickle";
+        public string EmbeddingModel { get; set; } = "text-embedding-3-small";
         public string? ApiKey { get; set; }
     }
 
