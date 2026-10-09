@@ -53,18 +53,20 @@ public sealed class MatchTools
         Job description:
         {{jobDescription}}
 
-        Return ONLY a single JSON object matching this exact schema:
+        Return ONLY a single JSON object, in exactly this shape:
         {
-          "skills": integer 0-100 (how well the required skills match),
-          "seniority": integer 0-100 (how well the seniority level matches),
-          "fit": integer 0-100 (overall role and preference fit),
-          "summary": string (one or two sentences),
-          "strengths": [string] (3-5 reasons the candidate fits),
-          "gaps": [string] (0-3 shortcomings or risks)
+          "skills": 85,
+          "seniority": 80,
+          "fit": 75,
+          "summary": "One or two sentences summarising the match.",
+          "strengths": ["First reason the candidate fits.", "Second reason.", "Third reason."],
+          "gaps": ["A shortcoming or risk."]
         }
 
         Rules:
         - Output only the JSON object. No prose, no markdown fences, no commentary.
+        - "skills", "seniority", and "fit" are integers from 0 to 100.
+        - "strengths" and "gaps" are arrays of plain text strings — never objects, never key/value pairs.
         - Placeholders such as [NAME] or [EMPLOYER_1] are anonymised values; keep them as they are.
         """;
 }
