@@ -6,6 +6,8 @@ namespace JobHunt.Api.Features.Match;
 
 public sealed class MatchAgent
 {
+    private const int MaxAttempts = 3;
+
     private const string Instructions = """
         You are a job match analyst. You have two tools: GetProfile and ScoreJob.
 
@@ -21,11 +23,13 @@ public sealed class MatchAgent
         """;
 
     private readonly AIAgent _agent;
+    private readonly MatchTools _tools;
     private readonly ILogger<MatchAgent> _logger;
 
     public MatchAgent(IChatClient chatClient, MatchTools matchTools, ILoggerFactory loggerFactory)
     {
         _logger = loggerFactory.CreateLogger<MatchAgent>();
+        _tools = matchTools;
 
         AITool[] tools =
         [
@@ -50,26 +54,38 @@ public sealed class MatchAgent
     public async Task<MatchScore> ScoreAsync(string jobDescription, CancellationToken ct)
     {
         var userMessage = jobDescription;
-        for (var attempt = 0; ; attempt++)
+        for (var attempt = 0; attempt < MaxAttempts; attempt++)
         {
             var response = await _agent.RunAsync([new ChatMessage(ChatRole.User, userMessage)], session: null, options: null, ct);
-            try
-            {
-                return MatchScoreJson.Parse(response.Text.Trim());
-            }
-            catch (MatchScoreFormatException)
-            {
-                _logger.LogWarning("MatchAgent output was not parseable on attempt {Attempt}: {Output}", attempt, response.Text);
+            var text = response.Text?.Trim() ?? string.Empty;
 
-                if (attempt != 0)
+            if (text.Length > 0)
+            {
+                try
                 {
-                    throw;
+                    return MatchScoreJson.Parse(text);
                 }
-
-                userMessage =
-                    "Your previous response was not valid JSON matching the required schema. " +
-                    "Call ScoreJob again and reply with only the JSON object. The job description was:\n\n" + jobDescription;
+                catch (MatchScoreFormatException)
+                {
+                    _logger.LogWarning("MatchAgent returned non-JSON output on attempt {Attempt}: {Output}", attempt, text);
+                }
             }
+            else
+            {
+                _logger.LogWarning("MatchAgent returned an empty response on attempt {Attempt}", attempt);
+            }
+
+            userMessage = RetryMessage(jobDescription, text.Length == 0);
         }
+
+        _logger.LogWarning("MatchAgent failed after {Attempts} attempts; scoring with the ScoreJob tool directly.", MaxAttempts);
+        return MatchScoreJson.Parse(await _tools.ScoreJobAsync(jobDescription, ct));
     }
+
+    private static string RetryMessage(string jobDescription, bool wasEmpty) =>
+        (wasEmpty
+            ? "Your previous response was empty."
+            : "Your previous response was not valid JSON matching the required schema.") +
+        " Call GetProfile, then ScoreJob with the job description, and reply with only the JSON object ScoreJob returned." +
+        " The job description was:\n\n" + jobDescription;
 }
