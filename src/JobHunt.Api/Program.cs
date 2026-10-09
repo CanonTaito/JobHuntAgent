@@ -15,6 +15,7 @@ builder.Services.AddSingleton<JdScannerAgent>();
 builder.Services.AddSingleton<MatchTools>();
 builder.Services.AddSingleton<MatchAgent>();
 builder.Services.AddSingleton<EmbeddingScorer>();
+builder.Services.AddSingleton<MatchScorer>();
 
 var app = builder.Build();
 
@@ -40,6 +41,17 @@ app.MapPost("/api/scan", async (JdScannerAgent scanner, HttpRequest request, Can
     }
 
     return Results.Ok(await scanner.ScanAsync(jd, ct));
+});
+
+app.MapPost("/api/match", async (MatchScorer scorer, HttpRequest request, CancellationToken ct) =>
+{
+    var jd = await new StreamReader(request.Body).ReadToEndAsync(ct);
+    if (string.IsNullOrWhiteSpace(jd))
+    {
+        return Results.BadRequest(new { error = "Request body must contain the job description text." });
+    }
+
+    return Results.Ok(await scorer.ScoreAsync(jd, ct));
 });
 
 app.Run();

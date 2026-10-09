@@ -108,6 +108,7 @@ No personally identifiable information ever reaches the chat or embedding model.
 | `GET` | `/api/profile` | the loaded candidate profile (contains your PII — for local verification) |
 | `GET` | `/api/profile/redacted` | the same profile with PII replaced by placeholders — what the LLM sees |
 | `POST` | `/api/scan` | scans a raw job description (request body = text) and returns the structured analysis |
+| `POST` | `/api/match` | scores a raw job description against the profile (request body = text) — overall, embedding similarity, and the LLM breakdown |
 
 ## Layout
 
