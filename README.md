@@ -2,7 +2,7 @@
 
 A job-search automation agent: it searches job listings, matches them against a candidate profile, infers hidden salary ranges, shortlists the strongest fits, and tracks applications end-to-end — with human sign-off before anything is ever submitted.
 
-**Current status: Phase 0** — paste a job description into the web page, a local LLM scans it, and you get a structured breakdown (title, company, seniority, work model, salary text, required/nice-to-have skills, responsibilities, benefits, keywords).
+**Current status: Phase 2** — scan a job description into a structured breakdown, score it against your candidate profile, and persist discovered listings to SQLite. A local LLM does the analysis.
 
 The full roadmap lives in [PLAN.md](PLAN.md).
 
@@ -14,7 +14,7 @@ The full roadmap lives in [PLAN.md](PLAN.md).
 | Agent orchestration | Microsoft Agent Framework (MAF) on Microsoft.Extensions.AI |
 | Chat provider | ollama (default) or OpenCode Zen — one config switch; both speak the OpenAI API via Microsoft.Extensions.AI.OpenAI |
 | Frontend | React 19 + TypeScript (Vite), oxlint |
-| Persistence | EF Core + SQLite (Phase 2) |
+| Persistence | EF Core + SQLite |
 
 ## Prerequisites
 
@@ -97,7 +97,24 @@ Inspect what loaded: `GET http://localhost:5051/api/profile`. Only `name` is req
 
 ## Privacy
 
-No personally identifiable information ever reaches the chat or embedding model. Starting with Phase 1, every prompt is built from placeholder-substituted text (e.g. `[NAME]`, `[EMPLOYER_1]`): the real values and the placeholder mapping are kept only locally (in-memory in Phase 1, SQLite thereafter) and re-substituted when responses come back. The known PII values — name (plus its first/last tokens), employers, institutions, and the profile's location — are replaced wherever they appear in profile text, including free-text fields. See exactly what the model would receive via `GET /api/profile/redacted`. With the default ollama provider, everything stays on your machine. Phase 0 sends only pasted job ads, which are public content.
+No personally identifiable information ever reaches the chat or embedding model. Starting with Phase 1, every prompt is built from placeholder-substituted text (e.g. `[NAME]`, `[EMPLOYER_1]`): the real values and the placeholder mapping are kept only locally in SQLite (see [Database](#database)) and re-substituted when responses come back. The known PII values — name (plus its first/last tokens), employers, institutions, and the profile's location — are replaced wherever they appear in profile text, including free-text fields. See exactly what the model would receive via `GET /api/profile/redacted`. With the default ollama provider, everything stays on your machine. Job ads are public content and pass through unchanged.
+
+## Database
+
+Phase 2 adds SQLite persistence via EF Core. The database file lives next to the API project at `src/JobHunt.Api/jobhunt.db` (gitignored — it holds the PII placeholder mapping) and migrations apply automatically on startup. Point it elsewhere with `ConnectionStrings:JobHunt` (env: `ConnectionStrings__JobHunt`); a relative `Data Source` is resolved against the API's content root.
+
+Two tables:
+
+| Table | Holds |
+|-------|-------|
+| `Applications` | discovered/scored listings, including `SalaryBand`, `SalarySource` (`Displayed`/`Inferred`) and `Status` |
+| `PiiMappings` | the placeholder ↔ real-value map from the privacy rule above — real values never leave this table, only placeholders reach the model |
+
+After changing the model, add a migration:
+
+```bash
+dotnet ef migrations add <Name> --project src/JobHunt.Api --startup-project src/JobHunt.Api --output-dir Features/Persistence/Migrations
+```
 
 ## Endpoints
 
@@ -116,9 +133,11 @@ No personally identifiable information ever reaches the chat or embedding model.
 src/
   JobHunt.Api/            ASP.NET Core Minimal API
     Ai/                   config-switchable chat + embedding wiring, .env loader
+    Features/Applications/ the JobApplication entity + status / salary-source enums
     Features/JdScan/      the JD Scanner agent + result model + JSON parser
     Features/Jobs/        IJobSource connector seam + in-memory source
     Features/Match/       GetProfile + ScoreJob agent tools for match scoring
+    Features/Persistence/ EF Core SQLite context, migrations, registration
     Features/Pii/         PII placeholder engine (redact out, rehydrate back)
     Features/Profile/     candidate profile model + startup loader
     Program.cs            endpoints + DI composition root

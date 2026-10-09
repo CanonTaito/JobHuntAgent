@@ -26,6 +26,11 @@ secrets.*
 profile*.json
 !profile.sample.json
 
+# ---- local SQLite database (holds PII placeholder mappings) ----
+*.db
+*.db-shm
+*.db-wal
+
 # ---- IDE / OS ----
 .idea/
 *.swp

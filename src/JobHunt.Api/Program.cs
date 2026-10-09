@@ -2,8 +2,10 @@ using JobHunt.Api.Ai;
 using JobHunt.Api.Features.JdScan;
 using JobHunt.Api.Features.Jobs;
 using JobHunt.Api.Features.Match;
+using JobHunt.Api.Features.Persistence;
 using JobHunt.Api.Features.Pii;
 using JobHunt.Api.Features.Profile;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.AI;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -13,6 +15,7 @@ builder.Services.AddJobHuntAi(builder.Configuration);
 builder.Services.AddCandidateProfile(builder.Configuration, builder.Environment);
 builder.Services.AddPiiProtection();
 builder.Services.AddJobSources();
+builder.Services.AddJobHuntDatabase(builder.Configuration, builder.Environment);
 builder.Services.AddSingleton<JdScannerAgent>();
 builder.Services.AddSingleton<MatchTools>();
 builder.Services.AddSingleton<MatchAgent>();
@@ -20,6 +23,12 @@ builder.Services.AddSingleton<EmbeddingScorer>();
 builder.Services.AddSingleton<MatchScorer>();
 
 var app = builder.Build();
+
+var contextFactory = app.Services.GetRequiredService<IDbContextFactory<JobHuntDbContext>>();
+await using (var db = contextFactory.CreateDbContext())
+{
+    db.Database.Migrate();
+}
 
 app.MapGet("/", () => "Hello World!");
 

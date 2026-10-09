@@ -8,7 +8,7 @@ public static class PiiServiceCollectionExtensions
 {
     public static IServiceCollection AddPiiProtection(this IServiceCollection services)
     {
-        services.AddSingleton<IPiiMappingStore, InMemoryPiiMappingStore>();
+        services.AddSingleton<IPiiMappingStore, EfPiiMappingStore>();
         services.AddSingleton(serviceProvider => new PiiRedactor(
             serviceProvider.GetRequiredService<CandidateProfile>(),
             serviceProvider.GetRequiredService<IPiiMappingStore>(),
