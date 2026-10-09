@@ -1,5 +1,6 @@
 using JobHunt.Api.Ai;
 using JobHunt.Api.Features.JdScan;
+using JobHunt.Api.Features.Jobs;
 using JobHunt.Api.Features.Match;
 using JobHunt.Api.Features.Pii;
 using JobHunt.Api.Features.Profile;
@@ -11,6 +12,7 @@ DotEnv.LoadInto(builder.Configuration);
 builder.Services.AddJobHuntAi(builder.Configuration);
 builder.Services.AddCandidateProfile(builder.Configuration, builder.Environment);
 builder.Services.AddPiiProtection();
+builder.Services.AddJobSources();
 builder.Services.AddSingleton<JdScannerAgent>();
 builder.Services.AddSingleton<MatchTools>();
 builder.Services.AddSingleton<MatchAgent>();

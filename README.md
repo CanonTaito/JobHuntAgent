@@ -117,6 +117,7 @@ src/
   JobHunt.Api/            ASP.NET Core Minimal API
     Ai/                   config-switchable chat + embedding wiring, .env loader
     Features/JdScan/      the JD Scanner agent + result model + JSON parser
+    Features/Jobs/        IJobSource connector seam + in-memory source
     Features/Match/       GetProfile + ScoreJob agent tools for match scoring
     Features/Pii/         PII placeholder engine (redact out, rehydrate back)
     Features/Profile/     candidate profile model + startup loader
