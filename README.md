@@ -125,6 +125,8 @@ src/
   JobHunt.Web/            React + Vite frontend
     src/scan.ts           typed client for POST /api/scan
     src/ScanPage.tsx      the Scan page
+    src/match.ts          typed client for POST /api/match
+    src/MatchPage.tsx     the Match page with the score breakdown card
 PLAN.md                   phased build plan
 global.json               pins the .NET SDK version
 ```

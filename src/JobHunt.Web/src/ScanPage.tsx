@@ -30,7 +30,6 @@ function ScanPage() {
 
   return (
     <main className="scan">
-      <h1>JobHuntAgent</h1>
       <p className="tagline">Paste a job description to get a structured breakdown.</p>
 
       <form className="scan-form" onSubmit={handleSubmit}>
