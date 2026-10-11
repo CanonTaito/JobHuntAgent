@@ -16,15 +16,6 @@ public sealed class ApprovalService
         _logger = logger;
     }
 
-    public async Task<ApplicationView?> GetAsync(int applicationId, CancellationToken ct)
-    {
-        await using var db = _contexts.CreateDbContext();
-        var application = await db.Applications
-            .AsNoTracking()
-            .FirstOrDefaultAsync(a => a.Id == applicationId, ct);
-        return application is null ? null : ApplicationView.From(application);
-    }
-
     public Task<ApplicationTransitionResult> RequestApprovalAsync(int applicationId, CancellationToken ct) =>
         TransitionAsync(applicationId, JobApplicationStatus.AwaitingApproval, ct);
 

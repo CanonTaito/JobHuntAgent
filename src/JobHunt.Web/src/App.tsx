@@ -1,17 +1,26 @@
 import { useState } from 'react'
 import ScanPage from './ScanPage'
 import MatchPage from './MatchPage'
+import TrackerPage from './TrackerPage'
 
-type Tab = 'scan' | 'match'
+type Tab = 'tracker' | 'scan' | 'match'
 
 function App() {
-  const [tab, setTab] = useState<Tab>('scan')
+  const [tab, setTab] = useState<Tab>('tracker')
 
   return (
     <div className="app">
       <header className="app-header">
         <h1>JobHuntAgent</h1>
         <nav className="tabs" aria-label="Features">
+          <button
+            type="button"
+            className={tab === 'tracker' ? 'tab tab-active' : 'tab'}
+            aria-current={tab === 'tracker' ? 'page' : undefined}
+            onClick={() => setTab('tracker')}
+          >
+            Tracker
+          </button>
           <button
             type="button"
             className={tab === 'scan' ? 'tab tab-active' : 'tab'}
@@ -30,7 +39,9 @@ function App() {
           </button>
         </nav>
       </header>
-      {tab === 'scan' ? <ScanPage /> : <MatchPage />}
+      {tab === 'tracker' && <TrackerPage />}
+      {tab === 'scan' && <ScanPage />}
+      {tab === 'match' && <MatchPage />}
     </div>
   )
 }

@@ -37,7 +37,7 @@ npm --prefix src/JobHunt.Web install
 npm --prefix src/JobHunt.Web run dev
 ```
 
-Open <http://localhost:5173>, paste a job description, and hit **Scan job description**. On a CPU-only machine with `gemma3`, expect roughly a minute per scan.
+Open <http://localhost:5173>. The **Tracker** opens first — hit **Search jobs** to discover and score listings from your profile, then group them by salary band. For a one-off, switch to **Scan a job description** or **Score a match** and paste a description. On a CPU-only machine with `gemma3`, expect roughly a minute per scan.
 
 Scanning and tailoring work with any chat model. **Match scoring and discovery** call agent tools, so they need a tool-capable model — e.g. `qwen2.5:3b`:
 
@@ -149,7 +149,7 @@ Many ads say "Salary undisclosed" yet still carry a hidden range used only to po
 - **`Inferred`** — no salary shown, so the engine probes the source's salary filter bucket by bucket; the ad silently drops out once the filter crosses its hidden range, revealing the band it sits in.
 - **`Unknown`** — nothing could be recovered.
 
-Bands: **Under 80k · 80-99k · 100-119k · 120-149k · 150-199k · 200k+**. Run `POST /api/discover` and each new application is persisted with its inferred band; the tracker (Phase 2.7) will group by it.
+Bands: **Under 80k · 80-99k · 100-119k · 120-149k · 150-199k · 200k+**. Run `POST /api/discover` and each new application is persisted with its inferred band; the tracker groups applications by it.
 
 ## Approval gate
 
@@ -173,6 +173,7 @@ Allowed transitions are declared in `ApplicationStatusTransitions`; any move tha
 | `POST` | `/api/match` | scores a raw job description against the profile (request body = text) — overall, embedding similarity, and the LLM breakdown |
 | `POST` | `/api/discover` | discovers listings from the job source, scores each new one, infers its salary band, and persists it; `?max=N` caps how many (default 5) |
 | `POST` | `/api/applications/{id}/tailor` | drafts tailored resume bullets and a cover letter for a stored application and persists them (status → `Tailored`); `404` if the id is unknown |
+| `GET` | `/api/applications` | lists applications ranked by score (best first); filter with `?status=Scored`, etc. — `400` for an unknown status |
 | `GET` | `/api/applications/{id}` | reads one application; `status` and `salarySource` are strings, not enum numbers |
 | `POST` | `/api/applications/{id}/request-approval` | moves `Tailored → AwaitingApproval` (into the approval queue); `409` from any other state |
 | `POST` | `/api/applications/{id}/approve` | the human gate — `AwaitingApproval → Applied`; `409` from any other state |
@@ -184,7 +185,7 @@ Allowed transitions are declared in `ApplicationStatusTransitions`; any move tha
 src/
   JobHunt.Api/            ASP.NET Core Minimal API
     Ai/                   config-switchable chat + embedding wiring, .env loader
-    Features/Applications/ the JobApplication entity + status enum
+    Features/Applications/ the JobApplication entity, status enum, read model + queries
     Features/Approvals/   approval gate: status-transition policy + service
     Features/Discovery/   discovery → score → persist pipeline
     Features/JdScan/      the JD Scanner agent + result model + JSON parser
@@ -202,6 +203,8 @@ src/
     src/ScanPage.tsx      the Scan page
     src/match.ts          typed client for POST /api/match
     src/MatchPage.tsx     the Match page with the score breakdown card
+    src/tracker.ts        typed client for the application + approval endpoints
+    src/TrackerPage.tsx   the tracker board (group by band/status, approval queue)
 PLAN.md                   phased build plan
 global.json               pins the .NET SDK version
 ```

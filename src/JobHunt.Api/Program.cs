@@ -1,4 +1,5 @@
 using JobHunt.Api.Ai;
+using JobHunt.Api.Features.Applications;
 using JobHunt.Api.Features.Approvals;
 using JobHunt.Api.Features.Discovery;
 using JobHunt.Api.Features.JdScan;
@@ -29,6 +30,7 @@ builder.Services.AddSingleton<SalaryBandInference>();
 builder.Services.AddSingleton<JobDiscoveryPipeline>();
 builder.Services.AddSingleton<TailoringAgent>();
 builder.Services.AddSingleton<TailoringService>();
+builder.Services.AddSingleton<ApplicationQueries>();
 builder.Services.AddSingleton<ApprovalService>();
 
 var app = builder.Build();
@@ -83,9 +85,25 @@ app.MapPost("/api/applications/{id:int}/tailor", async (int id, TailoringService
     return draft is null ? Results.NotFound() : Results.Ok(draft);
 });
 
-app.MapGet("/api/applications/{id:int}", async (int id, ApprovalService approvals, CancellationToken ct) =>
+app.MapGet("/api/applications", async (ApplicationQueries queries, string? status, CancellationToken ct) =>
 {
-    var application = await approvals.GetAsync(id, ct);
+    JobApplicationStatus? parsed = null;
+    if (!string.IsNullOrWhiteSpace(status))
+    {
+        if (!Enum.TryParse<JobApplicationStatus>(status, ignoreCase: true, out var value))
+        {
+            return Results.BadRequest(new { error = $"Unknown status '{status}'." });
+        }
+
+        parsed = value;
+    }
+
+    return Results.Ok(await queries.ListAsync(parsed, ct));
+});
+
+app.MapGet("/api/applications/{id:int}", async (int id, ApplicationQueries queries, CancellationToken ct) =>
+{
+    var application = await queries.GetAsync(id, ct);
     return application is null ? Results.NotFound() : Results.Ok(application);
 });
 
