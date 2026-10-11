@@ -1,4 +1,5 @@
 using JobHunt.Api.Ai;
+using JobHunt.Api.Features.Approvals;
 using JobHunt.Api.Features.Discovery;
 using JobHunt.Api.Features.JdScan;
 using JobHunt.Api.Features.Jobs;
@@ -28,6 +29,7 @@ builder.Services.AddSingleton<SalaryBandInference>();
 builder.Services.AddSingleton<JobDiscoveryPipeline>();
 builder.Services.AddSingleton<TailoringAgent>();
 builder.Services.AddSingleton<TailoringService>();
+builder.Services.AddSingleton<ApprovalService>();
 
 var app = builder.Build();
 
@@ -81,4 +83,26 @@ app.MapPost("/api/applications/{id:int}/tailor", async (int id, TailoringService
     return draft is null ? Results.NotFound() : Results.Ok(draft);
 });
 
+app.MapGet("/api/applications/{id:int}", async (int id, ApprovalService approvals, CancellationToken ct) =>
+{
+    var application = await approvals.GetAsync(id, ct);
+    return application is null ? Results.NotFound() : Results.Ok(application);
+});
+
+app.MapPost("/api/applications/{id:int}/request-approval", async (int id, ApprovalService approvals, CancellationToken ct) =>
+    ToResult(await approvals.RequestApprovalAsync(id, ct)));
+
+app.MapPost("/api/applications/{id:int}/approve", async (int id, ApprovalService approvals, CancellationToken ct) =>
+    ToResult(await approvals.ApproveAsync(id, ct)));
+
+app.MapPost("/api/applications/{id:int}/reject", async (int id, ApprovalService approvals, CancellationToken ct) =>
+    ToResult(await approvals.RejectAsync(id, ct)));
+
 app.Run();
+
+static IResult ToResult(ApplicationTransitionResult result) => result.Outcome switch
+{
+    TransitionOutcome.Succeeded => Results.Ok(result.Application),
+    TransitionOutcome.NotFound => Results.NotFound(),
+    _ => Results.Conflict(new { error = result.Message }),
+};

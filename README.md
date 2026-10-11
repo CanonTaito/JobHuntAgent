@@ -65,6 +65,13 @@ Draft tailored resume bullets and a cover letter for a stored application (uses 
 curl -X POST "http://localhost:5051/api/applications/1/tailor"
 ```
 
+Nothing is ever applied automatically. Move a tailored application into the approval queue, then approve (or reject) it:
+
+```bash
+curl -X POST "http://localhost:5051/api/applications/1/request-approval"
+curl -X POST "http://localhost:5051/api/applications/1/approve"
+```
+
 ## Configuration
 
 All settings live under the `AI` section of `src/JobHunt.Api/appsettings.json` and can be overridden with environment variables using .NET's `__` separator (`AI__Provider=zen`).
@@ -144,6 +151,16 @@ Many ads say "Salary undisclosed" yet still carry a hidden range used only to po
 
 Bands: **Under 80k · 80-99k · 100-119k · 120-149k · 150-199k · 200k+**. Run `POST /api/discover` and each new application is persisted with its inferred band; the tracker (Phase 2.7) will group by it.
 
+## Approval gate
+
+The agent never applies to anything. Drafting only moves an application to `Tailored`; the agent cannot reach `Applied` on its own — that transition only happens when a human approves it. The lifecycle is:
+
+```
+Discovered → Scored → Shortlisted → Tailored → AwaitingApproval → Applied → Archived
+```
+
+Allowed transitions are declared in `ApplicationStatusTransitions`; any move that is not listed (e.g. jumping straight from `Scored` to `Applied`, or re-approving an already-`Applied` job) is rejected with `409 Conflict`.
+
 ## Endpoints
 
 | Method | Route | Purpose |
@@ -156,6 +173,10 @@ Bands: **Under 80k · 80-99k · 100-119k · 120-149k · 150-199k · 200k+**. Run
 | `POST` | `/api/match` | scores a raw job description against the profile (request body = text) — overall, embedding similarity, and the LLM breakdown |
 | `POST` | `/api/discover` | discovers listings from the job source, scores each new one, infers its salary band, and persists it; `?max=N` caps how many (default 5) |
 | `POST` | `/api/applications/{id}/tailor` | drafts tailored resume bullets and a cover letter for a stored application and persists them (status → `Tailored`); `404` if the id is unknown |
+| `GET` | `/api/applications/{id}` | reads one application; `status` and `salarySource` are strings, not enum numbers |
+| `POST` | `/api/applications/{id}/request-approval` | moves `Tailored → AwaitingApproval` (into the approval queue); `409` from any other state |
+| `POST` | `/api/applications/{id}/approve` | the human gate — `AwaitingApproval → Applied`; `409` from any other state |
+| `POST` | `/api/applications/{id}/reject` | moves an active application to `Rejected`; `409` once `Applied`/`Archived` |
 
 ## Layout
 
@@ -164,6 +185,7 @@ src/
   JobHunt.Api/            ASP.NET Core Minimal API
     Ai/                   config-switchable chat + embedding wiring, .env loader
     Features/Applications/ the JobApplication entity + status enum
+    Features/Approvals/   approval gate: status-transition policy + service
     Features/Discovery/   discovery → score → persist pipeline
     Features/JdScan/      the JD Scanner agent + result model + JSON parser
     Features/Jobs/        IJobSource connector seam + in-memory source
