@@ -46,6 +46,12 @@ public sealed class JobApplication
 
     public string? MatchSummary { get; set; }
 
+    public string? TailoredBullets { get; set; }
+
+    public string? CoverLetter { get; set; }
+
+    public DateTimeOffset? TailoredAt { get; set; }
+
     public DateOnly? PostedAt { get; set; }
 
     public DateTimeOffset DiscoveredAt { get; set; }

@@ -27,6 +27,9 @@ namespace JobHunt.Api.Features.Persistence.Migrations
                         .IsRequired()
                         .HasColumnType("TEXT");
 
+                    b.Property<string>("CoverLetter")
+                        .HasColumnType("TEXT");
+
                     b.Property<string>("Description")
                         .IsRequired()
                         .HasColumnType("TEXT");
@@ -84,6 +87,12 @@ namespace JobHunt.Api.Features.Persistence.Migrations
 
                     b.Property<string>("Status")
                         .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTimeOffset?>("TailoredAt")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("TailoredBullets")
                         .HasColumnType("TEXT");
 
                     b.Property<string>("Title")

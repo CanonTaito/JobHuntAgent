@@ -39,7 +39,7 @@ npm --prefix src/JobHunt.Web run dev
 
 Open <http://localhost:5173>, paste a job description, and hit **Scan job description**. On a CPU-only machine with `gemma3`, expect roughly a minute per scan.
 
-Scanning works with any chat model. **Match scoring and discovery** call agent tools, so they need a tool-capable model — e.g. `qwen2.5:3b`:
+Scanning and tailoring work with any chat model. **Match scoring and discovery** call agent tools, so they need a tool-capable model — e.g. `qwen2.5:3b`:
 
 ```bash
 AI__Ollama__ChatModel=qwen2.5:3b dotnet run --project src/JobHunt.Api
@@ -57,6 +57,12 @@ Discover and score listings from the job source (query is derived from your prof
 
 ```bash
 curl -X POST "http://localhost:5051/api/discover?max=5"
+```
+
+Draft tailored resume bullets and a cover letter for a stored application (uses the application id returned by discover):
+
+```bash
+curl -X POST "http://localhost:5051/api/applications/1/tailor"
 ```
 
 ## Configuration
@@ -119,7 +125,7 @@ Two tables:
 
 | Table | Holds |
 |-------|-------|
-| `Applications` | discovered/scored listings, including `SalaryBand`, `SalarySource` (`Displayed`/`Inferred`), `Status`, and the match scores (`OverallScore`, `SkillsScore`, …) |
+| `Applications` | discovered/scored listings, including `SalaryBand`, `SalarySource` (`Displayed`/`Inferred`), `Status`, the match scores (`OverallScore`, `SkillsScore`, …), and the tailored draft (`TailoredBullets`, `CoverLetter`, `TailoredAt`) |
 | `PiiMappings` | the placeholder ↔ real-value map from the privacy rule above — real values never leave this table, only placeholders reach the model |
 
 After changing the model, add a migration:
@@ -149,6 +155,7 @@ Bands: **Under 80k · 80-99k · 100-119k · 120-149k · 150-199k · 200k+**. Run
 | `POST` | `/api/scan` | scans a raw job description (request body = text) and returns the structured analysis |
 | `POST` | `/api/match` | scores a raw job description against the profile (request body = text) — overall, embedding similarity, and the LLM breakdown |
 | `POST` | `/api/discover` | discovers listings from the job source, scores each new one, infers its salary band, and persists it; `?max=N` caps how many (default 5) |
+| `POST` | `/api/applications/{id}/tailor` | drafts tailored resume bullets and a cover letter for a stored application and persists them (status → `Tailored`); `404` if the id is unknown |
 
 ## Layout
 
@@ -165,6 +172,7 @@ src/
     Features/Pii/         PII placeholder engine (redact out, rehydrate back)
     Features/Profile/     candidate profile model + startup loader
     Features/Salary/      salary-band model + displayed/inferred band inference engine
+    Features/Tailoring/   tailoring agent (resume bullets + cover letter) and service
     Program.cs            endpoints + DI composition root
     profile.sample.json   fictional sample profile (profile.json is yours, gitignored)
   JobHunt.Web/            React + Vite frontend

@@ -7,6 +7,7 @@ using JobHunt.Api.Features.Persistence;
 using JobHunt.Api.Features.Pii;
 using JobHunt.Api.Features.Profile;
 using JobHunt.Api.Features.Salary;
+using JobHunt.Api.Features.Tailoring;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.AI;
 
@@ -25,6 +26,8 @@ builder.Services.AddSingleton<EmbeddingScorer>();
 builder.Services.AddSingleton<MatchScorer>();
 builder.Services.AddSingleton<SalaryBandInference>();
 builder.Services.AddSingleton<JobDiscoveryPipeline>();
+builder.Services.AddSingleton<TailoringAgent>();
+builder.Services.AddSingleton<TailoringService>();
 
 var app = builder.Build();
 
@@ -71,5 +74,11 @@ app.MapPost("/api/match", async (MatchScorer scorer, HttpRequest request, Cancel
 
 app.MapPost("/api/discover", async (JobDiscoveryPipeline pipeline, int? max, CancellationToken ct) =>
     Results.Ok(await pipeline.RunAsync(max ?? 5, ct)));
+
+app.MapPost("/api/applications/{id:int}/tailor", async (int id, TailoringService tailoring, CancellationToken ct) =>
+{
+    var draft = await tailoring.TailorAsync(id, ct);
+    return draft is null ? Results.NotFound() : Results.Ok(draft);
+});
 
 app.Run();
