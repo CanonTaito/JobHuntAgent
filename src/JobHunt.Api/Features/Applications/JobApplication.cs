@@ -32,6 +32,18 @@ public sealed class JobApplication
 
     public JobApplicationStatus Status { get; set; }
 
+    public int? OverallScore { get; set; }
+
+    public int? SimilarityScore { get; set; }
+
+    public int? SkillsScore { get; set; }
+
+    public int? SeniorityScore { get; set; }
+
+    public int? FitScore { get; set; }
+
+    public string? MatchSummary { get; set; }
+
     public DateOnly? PostedAt { get; set; }
 
     public DateTimeOffset DiscoveredAt { get; set; }

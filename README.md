@@ -39,12 +39,24 @@ npm --prefix src/JobHunt.Web run dev
 
 Open <http://localhost:5173>, paste a job description, and hit **Scan job description**. On a CPU-only machine with `gemma3`, expect roughly a minute per scan.
 
+Scanning works with any chat model. **Match scoring and discovery** call agent tools, so they need a tool-capable model — e.g. `qwen2.5:3b`:
+
+```bash
+AI__Ollama__ChatModel=qwen2.5:3b dotnet run --project src/JobHunt.Api
+```
+
 Try the API directly:
 
 ```bash
 curl -X POST http://localhost:5051/api/scan \
   -H "Content-Type: text/plain" \
   --data-binary @job-description.txt
+```
+
+Discover and score listings from the job source (query is derived from your profile preferences):
+
+```bash
+curl -X POST "http://localhost:5051/api/discover?max=5"
 ```
 
 ## Configuration
@@ -107,7 +119,7 @@ Two tables:
 
 | Table | Holds |
 |-------|-------|
-| `Applications` | discovered/scored listings, including `SalaryBand`, `SalarySource` (`Displayed`/`Inferred`) and `Status` |
+| `Applications` | discovered/scored listings, including `SalaryBand`, `SalarySource` (`Displayed`/`Inferred`), `Status`, and the match scores (`OverallScore`, `SkillsScore`, …) |
 | `PiiMappings` | the placeholder ↔ real-value map from the privacy rule above — real values never leave this table, only placeholders reach the model |
 
 After changing the model, add a migration:
@@ -126,6 +138,7 @@ dotnet ef migrations add <Name> --project src/JobHunt.Api --startup-project src/
 | `GET` | `/api/profile/redacted` | the same profile with PII replaced by placeholders — what the LLM sees |
 | `POST` | `/api/scan` | scans a raw job description (request body = text) and returns the structured analysis |
 | `POST` | `/api/match` | scores a raw job description against the profile (request body = text) — overall, embedding similarity, and the LLM breakdown |
+| `POST` | `/api/discover` | discovers listings from the job source, scores each new one, and persists it; `?max=N` caps how many (default 5) |
 
 ## Layout
 
@@ -134,6 +147,7 @@ src/
   JobHunt.Api/            ASP.NET Core Minimal API
     Ai/                   config-switchable chat + embedding wiring, .env loader
     Features/Applications/ the JobApplication entity + status / salary-source enums
+    Features/Discovery/   discovery → score → persist pipeline
     Features/JdScan/      the JD Scanner agent + result model + JSON parser
     Features/Jobs/        IJobSource connector seam + in-memory source
     Features/Match/       GetProfile + ScoreJob agent tools for match scoring

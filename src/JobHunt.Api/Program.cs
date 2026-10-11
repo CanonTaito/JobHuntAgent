@@ -1,4 +1,5 @@
 using JobHunt.Api.Ai;
+using JobHunt.Api.Features.Discovery;
 using JobHunt.Api.Features.JdScan;
 using JobHunt.Api.Features.Jobs;
 using JobHunt.Api.Features.Match;
@@ -21,6 +22,7 @@ builder.Services.AddSingleton<MatchTools>();
 builder.Services.AddSingleton<MatchAgent>();
 builder.Services.AddSingleton<EmbeddingScorer>();
 builder.Services.AddSingleton<MatchScorer>();
+builder.Services.AddSingleton<JobDiscoveryPipeline>();
 
 var app = builder.Build();
 
@@ -64,5 +66,8 @@ app.MapPost("/api/match", async (MatchScorer scorer, HttpRequest request, Cancel
 
     return Results.Ok(await scorer.ScoreAsync(jd, ct));
 });
+
+app.MapPost("/api/discover", async (JobDiscoveryPipeline pipeline, int? max, CancellationToken ct) =>
+    Results.Ok(await pipeline.RunAsync(max ?? 5, ct)));
 
 app.Run();

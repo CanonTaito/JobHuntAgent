@@ -34,8 +34,17 @@ namespace JobHunt.Api.Features.Persistence.Migrations
                     b.Property<DateTimeOffset>("DiscoveredAt")
                         .HasColumnType("TEXT");
 
+                    b.Property<int?>("FitScore")
+                        .HasColumnType("INTEGER");
+
                     b.Property<string>("Location")
                         .HasColumnType("TEXT");
+
+                    b.Property<string>("MatchSummary")
+                        .HasColumnType("TEXT");
+
+                    b.Property<int?>("OverallScore")
+                        .HasColumnType("INTEGER");
 
                     b.Property<DateOnly?>("PostedAt")
                         .HasColumnType("TEXT");
@@ -55,6 +64,15 @@ namespace JobHunt.Api.Features.Persistence.Migrations
                     b.Property<string>("SalarySource")
                         .IsRequired()
                         .HasColumnType("TEXT");
+
+                    b.Property<int?>("SeniorityScore")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<int?>("SimilarityScore")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<int?>("SkillsScore")
+                        .HasColumnType("INTEGER");
 
                     b.Property<string>("Source")
                         .IsRequired()
