@@ -8,5 +8,9 @@ public sealed record JobSearchQuery
 
     public IReadOnlyList<string> WorkModels { get; init; } = [];
 
+    public int? SalaryMin { get; init; }
+
+    public int? SalaryMax { get; init; }
+
     public int MaxResults { get; init; } = 25;
 }

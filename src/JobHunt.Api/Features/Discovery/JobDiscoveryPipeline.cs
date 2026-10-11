@@ -3,6 +3,7 @@ using JobHunt.Api.Features.Jobs;
 using JobHunt.Api.Features.Match;
 using JobHunt.Api.Features.Persistence;
 using JobHunt.Api.Features.Profile;
+using JobHunt.Api.Features.Salary;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 
@@ -12,6 +13,7 @@ public sealed class JobDiscoveryPipeline
 {
     private readonly IJobSource _source;
     private readonly MatchScorer _scorer;
+    private readonly SalaryBandInference _salaryInference;
     private readonly CandidateProfile _profile;
     private readonly IDbContextFactory<JobHuntDbContext> _contexts;
     private readonly ILogger<JobDiscoveryPipeline> _logger;
@@ -19,12 +21,14 @@ public sealed class JobDiscoveryPipeline
     public JobDiscoveryPipeline(
         IJobSource source,
         MatchScorer scorer,
+        SalaryBandInference salaryInference,
         CandidateProfile profile,
         IDbContextFactory<JobHuntDbContext> contexts,
         ILogger<JobDiscoveryPipeline> logger)
     {
         _source = source;
         _scorer = scorer;
+        _salaryInference = salaryInference;
         _profile = profile;
         _contexts = contexts;
         _logger = logger;
@@ -32,7 +36,8 @@ public sealed class JobDiscoveryPipeline
 
     public async Task<DiscoveryReport> RunAsync(int maxResults, CancellationToken ct)
     {
-        var listings = await _source.SearchAsync(BuildQuery(maxResults), ct);
+        var query = BuildQuery(maxResults);
+        var listings = await _source.SearchAsync(query, ct);
 
         await using var db = _contexts.CreateDbContext();
         var seen = (await db.Applications
@@ -54,6 +59,7 @@ public sealed class JobDiscoveryPipeline
             }
 
             var report = await _scorer.ScoreAsync(listing.Description, ct);
+            var salary = await _salaryInference.InferAsync(listing, query, ct);
             var now = DateTimeOffset.UtcNow;
 
             var application = new JobApplication
@@ -69,9 +75,8 @@ public sealed class JobDiscoveryPipeline
                 SalaryMin = listing.SalaryMin,
                 SalaryMax = listing.SalaryMax,
                 SalaryCurrency = listing.SalaryCurrency,
-                SalarySource = listing.SalaryMin is not null || listing.SalaryMax is not null
-                    ? SalarySource.Displayed
-                    : SalarySource.Unknown,
+                SalaryBand = salary.Band?.Label,
+                SalarySource = salary.Source,
                 Status = JobApplicationStatus.Scored,
                 OverallScore = report.Overall,
                 SimilarityScore = report.Similarity,

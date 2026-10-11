@@ -6,6 +6,7 @@ using JobHunt.Api.Features.Match;
 using JobHunt.Api.Features.Persistence;
 using JobHunt.Api.Features.Pii;
 using JobHunt.Api.Features.Profile;
+using JobHunt.Api.Features.Salary;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.AI;
 
@@ -22,6 +23,7 @@ builder.Services.AddSingleton<MatchTools>();
 builder.Services.AddSingleton<MatchAgent>();
 builder.Services.AddSingleton<EmbeddingScorer>();
 builder.Services.AddSingleton<MatchScorer>();
+builder.Services.AddSingleton<SalaryBandInference>();
 builder.Services.AddSingleton<JobDiscoveryPipeline>();
 
 var app = builder.Build();

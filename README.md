@@ -53,7 +53,7 @@ curl -X POST http://localhost:5051/api/scan \
   --data-binary @job-description.txt
 ```
 
-Discover and score listings from the job source (query is derived from your profile preferences):
+Discover and score listings from the job source (query is derived from your profile preferences), inferring a salary band for each:
 
 ```bash
 curl -X POST "http://localhost:5051/api/discover?max=5"
@@ -128,6 +128,16 @@ After changing the model, add a migration:
 dotnet ef migrations add <Name> --project src/JobHunt.Api --startup-project src/JobHunt.Api --output-dir Features/Persistence/Migrations
 ```
 
+## Salary bands
+
+Many ads say "Salary undisclosed" yet still carry a hidden range used only to power search filters. The engine labels every listing with a band and records how it was found (`SalarySource`):
+
+- **`Displayed`** — the ad states a salary; the band comes straight from it.
+- **`Inferred`** — no salary shown, so the engine probes the source's salary filter bucket by bucket; the ad silently drops out once the filter crosses its hidden range, revealing the band it sits in.
+- **`Unknown`** — nothing could be recovered.
+
+Bands: **Under 80k · 80-99k · 100-119k · 120-149k · 150-199k · 200k+**. Run `POST /api/discover` and each new application is persisted with its inferred band; the tracker (Phase 2.7) will group by it.
+
 ## Endpoints
 
 | Method | Route | Purpose |
@@ -138,7 +148,7 @@ dotnet ef migrations add <Name> --project src/JobHunt.Api --startup-project src/
 | `GET` | `/api/profile/redacted` | the same profile with PII replaced by placeholders — what the LLM sees |
 | `POST` | `/api/scan` | scans a raw job description (request body = text) and returns the structured analysis |
 | `POST` | `/api/match` | scores a raw job description against the profile (request body = text) — overall, embedding similarity, and the LLM breakdown |
-| `POST` | `/api/discover` | discovers listings from the job source, scores each new one, and persists it; `?max=N` caps how many (default 5) |
+| `POST` | `/api/discover` | discovers listings from the job source, scores each new one, infers its salary band, and persists it; `?max=N` caps how many (default 5) |
 
 ## Layout
 
@@ -146,7 +156,7 @@ dotnet ef migrations add <Name> --project src/JobHunt.Api --startup-project src/
 src/
   JobHunt.Api/            ASP.NET Core Minimal API
     Ai/                   config-switchable chat + embedding wiring, .env loader
-    Features/Applications/ the JobApplication entity + status / salary-source enums
+    Features/Applications/ the JobApplication entity + status enum
     Features/Discovery/   discovery → score → persist pipeline
     Features/JdScan/      the JD Scanner agent + result model + JSON parser
     Features/Jobs/        IJobSource connector seam + in-memory source
@@ -154,6 +164,7 @@ src/
     Features/Persistence/ EF Core SQLite context, migrations, registration
     Features/Pii/         PII placeholder engine (redact out, rehydrate back)
     Features/Profile/     candidate profile model + startup loader
+    Features/Salary/      salary-band model + displayed/inferred band inference engine
     Program.cs            endpoints + DI composition root
     profile.sample.json   fictional sample profile (profile.json is yours, gitignored)
   JobHunt.Web/            React + Vite frontend

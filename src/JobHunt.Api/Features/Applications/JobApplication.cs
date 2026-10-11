@@ -1,3 +1,5 @@
+using JobHunt.Api.Features.Salary;
+
 namespace JobHunt.Api.Features.Applications;
 
 public sealed class JobApplication
@@ -49,13 +51,6 @@ public sealed class JobApplication
     public DateTimeOffset DiscoveredAt { get; set; }
 
     public DateTimeOffset UpdatedAt { get; set; }
-}
-
-public enum SalarySource
-{
-    Unknown,
-    Displayed,
-    Inferred,
 }
 
 public enum JobApplicationStatus
