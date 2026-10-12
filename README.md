@@ -133,6 +133,7 @@ Two tables:
 | Table | Holds |
 |-------|-------|
 | `Applications` | discovered/scored listings, including `SalaryBand`, `SalarySource` (`Displayed`/`Inferred`), `Status`, the match scores (`OverallScore`, `SkillsScore`, …), and the tailored draft (`TailoredBullets`, `CoverLetter`, `TailoredAt`) |
+| `Outcomes` | the append-only outcome memory — one row per recorded result (`Outcome`, `Note`, `RecordedAt`) linked to its application |
 | `PiiMappings` | the placeholder ↔ real-value map from the privacy rule above — real values never leave this table, only placeholders reach the model |
 
 After changing the model, add a migration:
@@ -161,6 +162,17 @@ Discovered → Scored → Shortlisted → Tailored → AwaitingApproval → Appl
 
 Allowed transitions are declared in `ApplicationStatusTransitions`; any move that is not listed (e.g. jumping straight from `Scored` to `Applied`, or re-approving an already-`Applied` job) is rejected with `409 Conflict`.
 
+## Outcome memory
+
+Once an application is `Applied`, the agent remembers what happened to it so future matches can be re-ranked (next up: `3.2`). Outcomes are an append-only log, so a single application can progress — `NoResponse` → `Interview` → `Offer` — each step recorded with a timestamp and an optional note:
+
+```
+POST /api/applications/1/outcome   { "outcome": "Interview", "note": "Recruiter call booked." }
+GET  /api/applications/1/outcomes
+```
+
+Outcomes can only be recorded for applications that were actually submitted (`Applied` or `Archived`) — recording one on a job that is merely `Scored` returns `409 Conflict`. Outcomes are stored locally and never sent to a model.
+
 ## Endpoints
 
 | Method | Route | Purpose |
@@ -178,6 +190,8 @@ Allowed transitions are declared in `ApplicationStatusTransitions`; any move tha
 | `POST` | `/api/applications/{id}/request-approval` | moves `Tailored → AwaitingApproval` (into the approval queue); `409` from any other state |
 | `POST` | `/api/applications/{id}/approve` | the human gate — `AwaitingApproval → Applied`; `409` from any other state |
 | `POST` | `/api/applications/{id}/reject` | moves an active application to `Rejected`; `409` once `Applied`/`Archived` |
+| `POST` | `/api/applications/{id}/outcome` | records an outcome (`NoResponse`/`Interview`/`Offer`/`Rejected`/`Withdrawn`) for a submitted application; `409` if it has not been `Applied` |
+| `GET` | `/api/applications/{id}/outcomes` | lists an application's recorded outcomes, newest first |
 
 ## Layout
 
@@ -191,6 +205,7 @@ src/
     Features/JdScan/      the JD Scanner agent + result model + JSON parser
     Features/Jobs/        IJobSource connector seam + in-memory source
     Features/Match/       GetProfile + ScoreJob agent tools for match scoring
+    Features/Outcomes/    outcome memory store (EF-backed application outcomes)
     Features/Persistence/ EF Core SQLite context, migrations, registration
     Features/Pii/         PII placeholder engine (redact out, rehydrate back)
     Features/Profile/     candidate profile model + startup loader

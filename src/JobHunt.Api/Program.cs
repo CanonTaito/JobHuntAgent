@@ -5,6 +5,7 @@ using JobHunt.Api.Features.Discovery;
 using JobHunt.Api.Features.JdScan;
 using JobHunt.Api.Features.Jobs;
 using JobHunt.Api.Features.Match;
+using JobHunt.Api.Features.Outcomes;
 using JobHunt.Api.Features.Persistence;
 using JobHunt.Api.Features.Pii;
 using JobHunt.Api.Features.Profile;
@@ -32,6 +33,7 @@ builder.Services.AddSingleton<TailoringAgent>();
 builder.Services.AddSingleton<TailoringService>();
 builder.Services.AddSingleton<ApplicationQueries>();
 builder.Services.AddSingleton<ApprovalService>();
+builder.Services.AddSingleton<OutcomeStore>();
 
 var app = builder.Build();
 
@@ -116,11 +118,35 @@ app.MapPost("/api/applications/{id:int}/approve", async (int id, ApprovalService
 app.MapPost("/api/applications/{id:int}/reject", async (int id, ApprovalService approvals, CancellationToken ct) =>
     ToResult(await approvals.RejectAsync(id, ct)));
 
+app.MapPost("/api/applications/{id:int}/outcome", async (int id, OutcomeRequest request, OutcomeStore outcomes, CancellationToken ct) =>
+{
+    if (string.IsNullOrWhiteSpace(request.Outcome) ||
+        !Enum.TryParse<ApplicationOutcome>(request.Outcome, ignoreCase: true, out var outcome))
+    {
+        return Results.BadRequest(new { error = $"Unknown outcome '{request.Outcome}'." });
+    }
+
+    return ToOutcomeResult(await outcomes.RecordAsync(id, outcome, request.Note, ct));
+});
+
+app.MapGet("/api/applications/{id:int}/outcomes", async (int id, OutcomeStore outcomes, CancellationToken ct) =>
+{
+    var records = await outcomes.ListAsync(id, ct);
+    return records is null ? Results.NotFound() : Results.Ok(records);
+});
+
 app.Run();
 
 static IResult ToResult(ApplicationTransitionResult result) => result.Outcome switch
 {
     TransitionOutcome.Succeeded => Results.Ok(result.Application),
     TransitionOutcome.NotFound => Results.NotFound(),
+    _ => Results.Conflict(new { error = result.Message }),
+};
+
+static IResult ToOutcomeResult(OutcomeResult result) => result.Status switch
+{
+    OutcomeResultStatus.Succeeded => Results.Ok(result.Record),
+    OutcomeResultStatus.NotFound => Results.NotFound(),
     _ => Results.Conflict(new { error = result.Message }),
 };

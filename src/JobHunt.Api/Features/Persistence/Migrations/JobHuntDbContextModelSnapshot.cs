@@ -116,6 +116,32 @@ namespace JobHunt.Api.Features.Persistence.Migrations
                     b.ToTable("Applications");
                 });
 
+            modelBuilder.Entity("JobHunt.Api.Features.Outcomes.OutcomeRecord", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("INTEGER");
+
+                    b.Property<int>("JobApplicationId")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("Note")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Outcome")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTimeOffset>("RecordedAt")
+                        .HasColumnType("TEXT");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("JobApplicationId");
+
+                    b.ToTable("Outcomes");
+                });
+
             modelBuilder.Entity("JobHunt.Api.Features.Pii.PiiMappingRecord", b =>
                 {
                     b.Property<int>("Id")
@@ -139,6 +165,15 @@ namespace JobHunt.Api.Features.Persistence.Migrations
                         .IsUnique();
 
                     b.ToTable("PiiMappings");
+                });
+
+            modelBuilder.Entity("JobHunt.Api.Features.Outcomes.OutcomeRecord", b =>
+                {
+                    b.HasOne("JobHunt.Api.Features.Applications.JobApplication", null)
+                        .WithMany()
+                        .HasForeignKey("JobApplicationId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
                 });
 #pragma warning restore 612, 618
         }
