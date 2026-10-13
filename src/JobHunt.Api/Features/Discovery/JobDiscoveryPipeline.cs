@@ -13,7 +13,7 @@ namespace JobHunt.Api.Features.Discovery;
 public sealed class JobDiscoveryPipeline
 {
     private readonly IJobSource _source;
-    private readonly MatchScorer _scorer;
+    private readonly IMatchScorer _scorer;
     private readonly SalaryBandInference _salaryInference;
     private readonly CandidateProfile _profile;
     private readonly IDbContextFactory<JobHuntDbContext> _contexts;
@@ -22,7 +22,7 @@ public sealed class JobDiscoveryPipeline
 
     public JobDiscoveryPipeline(
         IJobSource source,
-        MatchScorer scorer,
+        IMatchScorer scorer,
         SalaryBandInference salaryInference,
         CandidateProfile profile,
         IDbContextFactory<JobHuntDbContext> contexts,

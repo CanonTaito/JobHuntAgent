@@ -4,7 +4,7 @@ using Microsoft.Extensions.Logging;
 
 namespace JobHunt.Api.Features.Match;
 
-public sealed class MatchAgent
+public sealed class MatchAgent : IMatchAgent
 {
     private const int MaxAttempts = 3;
 

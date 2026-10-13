@@ -2,15 +2,15 @@ using JobHunt.Api.Features.Observability;
 
 namespace JobHunt.Api.Features.Match;
 
-public sealed class MatchScorer
+public sealed class MatchScorer : IMatchScorer
 {
     private static readonly string[] Signals = ["skills", "seniority", "fit", "similarity"];
 
-    private readonly MatchAgent _agent;
+    private readonly IMatchAgent _agent;
     private readonly EmbeddingScorer _embeddings;
     private readonly JobHuntMetrics _metrics;
 
-    public MatchScorer(MatchAgent agent, EmbeddingScorer embeddings, JobHuntMetrics metrics)
+    public MatchScorer(IMatchAgent agent, EmbeddingScorer embeddings, JobHuntMetrics metrics)
     {
         _agent = agent;
         _embeddings = embeddings;

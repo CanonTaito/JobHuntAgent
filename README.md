@@ -16,6 +16,7 @@ The full roadmap lives in [PLAN.md](PLAN.md).
 | Frontend | React 19 + TypeScript (Vite), oxlint |
 | Persistence | EF Core + SQLite |
 | Observability | OpenTelemetry (traces/metrics/logs) + health checks |
+| Testing | xUnit (offline fakes, in-memory SQLite) |
 
 ## Prerequisites
 
@@ -316,6 +317,8 @@ src/
     src/MatchPage.tsx     the Match page with the score breakdown card
     src/tracker.ts        typed client for the application + approval endpoints
     src/TrackerPage.tsx   the tracker board (group by band/status, approval queue)
+tests/
+  JobHunt.Api.Tests/      xUnit suite + fakes (job source, embeddings, in-memory SQLite, meter factory)
 PLAN.md                   phased build plan
 global.json               pins the .NET SDK version
 ```
@@ -324,10 +327,15 @@ global.json               pins the .NET SDK version
 
 ```bash
 dotnet build JobHuntAgent.slnx -warnaserror
+dotnet test JobHuntAgent.slnx
 npm --prefix src/JobHunt.Web run lint
 npm --prefix src/JobHunt.Web run build
 ```
 
+## Testing
+
+`tests/JobHunt.Api.Tests` is an xUnit suite covering the deterministic core: salary-band classification and inference (displayed, inferred, unknown), the match-score parsing/clamping and embedding-similarity math, the discovery pipeline (scoring, persistence and de-duplication against an in-memory SQLite database), plus the SEEK salary mapper, status-transition policy, outcome re-ranker, follow-up validation and the PII redactor. The LLM and network edges are replaced with small fakes, so the suite runs offline with no model or database server.
+
 ## Roadmap
 
-Phases 1–4 in [PLAN.md](PLAN.md): match scoring against a candidate profile, a discovery → scoring → tailoring → approval → tracking pipeline with salary-band inference, outcome memory, a live SEEK search connector, and OpenTelemetry tracing + health checks — with a test suite and CI still to come.
+Phases 1–4 in [PLAN.md](PLAN.md): match scoring against a candidate profile, a discovery → scoring → tailoring → approval → tracking pipeline with salary-band inference, outcome memory, a live SEEK search connector, OpenTelemetry tracing + health checks, and an xUnit test suite — with CI still to come.
