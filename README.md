@@ -74,7 +74,7 @@ curl -X POST "http://localhost:5051/api/applications/1/approve"
 
 ## Configuration
 
-All settings live under the `AI` section of `src/JobHunt.Api/appsettings.json` and can be overridden with environment variables using .NET's `__` separator (`AI__Provider=zen`).
+All AI settings live under the `AI` section of `src/JobHunt.Api/appsettings.json` and can be overridden with environment variables using .NET's `__` separator (`AI__Provider=zen`). Job-source settings live under `Jobs` (see [Job sources](#job-sources)).
 
 | Setting | Default | Notes |
 |---------|---------|-------|
@@ -141,6 +141,35 @@ After changing the model, add a migration:
 ```bash
 dotnet ef migrations add <Name> --project src/JobHunt.Api --startup-project src/JobHunt.Api --output-dir Features/Persistence/Migrations
 ```
+
+## Job sources
+
+Discovery runs through the `IJobSource` abstraction, so the agent searches a pluggable source. Pick one with `Jobs:Source` (env: `Jobs__Source`):
+
+| Source | Value | Notes |
+|--------|-------|-------|
+| In-memory demo | `in-memory` (default) | five fixed fictional ads — used for demos and tests, no network |
+| SEEK | `seek` | live listings from SEEK's search JSON (`seek.com.au`) |
+
+The SEEK connector calls SEEK's (undocumented) search endpoint, maps each ad into a `JobListing` (parsing displayed salary text, work arrangement and advertiser), and is deliberately polite: requests are **throttled** to at most one every `Jobs:Seek:MinRequestIntervalMs` and responses are **cached** in memory for `Jobs:Seek:CacheMinutes`, keyed by the query. If SEEK blocks or is unreachable the search simply returns nothing and is logged — discovery never crashes.
+
+| Setting | Default | Notes |
+|---------|---------|-------|
+| `Jobs:Source` | `in-memory` | `in-memory` or `seek` |
+| `Jobs:Seek:Endpoint` | `https://www.seek.com.au/api/chalice-search/v4/search` | the search JSON endpoint |
+| `Jobs:Seek:SiteKey` | `AU-Main` | SEEK site |
+| `Jobs:Seek:SourceSystem` | `houston` | SEEK's source-system parameter |
+| `Jobs:Seek:PageSize` | `30` | results per page |
+| `Jobs:Seek:MaxPages` | `2` | pages fetched per search |
+| `Jobs:Seek:MinRequestIntervalMs` | `1000` | throttle between upstream requests |
+| `Jobs:Seek:CacheMinutes` | `30` | in-memory response cache TTL |
+| `Jobs:Seek:TimeoutSeconds` | `15` | per-request timeout |
+
+```powershell
+$env:Jobs__Source = "seek"; dotnet run --project src/JobHunt.Api
+```
+
+SEEK exposes no public API and uses anti-bot protection, so keep the throttle and cache on and expect occasional empty results.
 
 ## Salary bands
 
@@ -231,6 +260,7 @@ src/
     Features/FollowUps/   follow-up reminder agent (subject, body, sendAfterDays) + service
     Features/JdScan/      the JD Scanner agent + result model + JSON parser
     Features/Jobs/        IJobSource connector seam + in-memory source
+    Features/Jobs/Seek/   live SEEK search connector (throttled + cached) + mapper
     Features/Match/       GetProfile + ScoreJob agent tools for match scoring
     Features/Outcomes/    outcome memory store (EF-backed application outcomes)
     Features/Persistence/ EF Core SQLite context, migrations, registration
@@ -262,4 +292,4 @@ npm --prefix src/JobHunt.Web run build
 
 ## Roadmap
 
-Phases 1–4 in [PLAN.md](PLAN.md): match scoring against a candidate profile, a discovery → scoring → tailoring → approval → tracking pipeline with salary-band inference, outcome memory, then live SEEK search, OpenTelemetry, and a test suite.
+Phases 1–4 in [PLAN.md](PLAN.md): match scoring against a candidate profile, a discovery → scoring → tailoring → approval → tracking pipeline with salary-band inference, outcome memory, and a live SEEK search connector — with OpenTelemetry and a test suite still to come.
