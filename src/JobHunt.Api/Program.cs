@@ -6,6 +6,7 @@ using JobHunt.Api.Features.FollowUps;
 using JobHunt.Api.Features.JdScan;
 using JobHunt.Api.Features.Jobs;
 using JobHunt.Api.Features.Match;
+using JobHunt.Api.Features.Observability;
 using JobHunt.Api.Features.Outcomes;
 using JobHunt.Api.Features.Persistence;
 using JobHunt.Api.Features.Pii;
@@ -13,8 +14,14 @@ using JobHunt.Api.Features.Profile;
 using JobHunt.Api.Features.Ranking;
 using JobHunt.Api.Features.Salary;
 using JobHunt.Api.Features.Tailoring;
+using Microsoft.AspNetCore.Diagnostics.HealthChecks;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.AI;
+using OpenTelemetry;
+using OpenTelemetry.Logs;
+using OpenTelemetry.Metrics;
+using OpenTelemetry.Resources;
+using OpenTelemetry.Trace;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -41,6 +48,26 @@ builder.Services.AddSingleton<OutcomeInsightsService>();
 builder.Services.AddSingleton<MatchReRanker>();
 builder.Services.AddSingleton<FollowUpAgent>();
 builder.Services.AddSingleton<FollowUpService>();
+builder.Services.AddSingleton<JobHuntMetrics>();
+
+builder.Services.AddOpenTelemetry()
+    .ConfigureResource(resource => resource.AddService(JobHuntTelemetry.ServiceName))
+    .WithTracing(tracing => tracing
+        .AddAspNetCoreInstrumentation(options =>
+            options.Filter = context => !context.Request.Path.StartsWithSegments("/health"))
+        .AddHttpClientInstrumentation(options => options.RecordException = true)
+        .AddEntityFrameworkCoreInstrumentation()
+        .AddSource(JobHuntTelemetry.ActivitySourceName))
+    .WithMetrics(metrics => metrics
+        .AddAspNetCoreInstrumentation()
+        .AddHttpClientInstrumentation()
+        .AddRuntimeInstrumentation()
+        .AddMeter(JobHuntTelemetry.MeterName))
+    .WithLogging()
+    .UseOtlpExporter();
+
+builder.Services.AddHealthChecks()
+    .AddDbContextCheck<JobHuntDbContext>("database", tags: ["ready"]);
 
 var app = builder.Build();
 
@@ -51,6 +78,9 @@ await using (var db = contextFactory.CreateDbContext())
 }
 
 app.MapGet("/", () => "Hello World!");
+
+app.MapHealthChecks("/health/live", new HealthCheckOptions { Predicate = _ => false });
+app.MapHealthChecks("/health/ready", new HealthCheckOptions { Predicate = check => check.Tags.Contains("ready") });
 
 app.MapGet("/api/ai/ping", async (IChatClient chat, CancellationToken ct) =>
 {

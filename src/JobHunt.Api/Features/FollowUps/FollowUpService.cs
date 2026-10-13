@@ -1,4 +1,5 @@
 using JobHunt.Api.Features.Applications;
+using JobHunt.Api.Features.Observability;
 using JobHunt.Api.Features.Persistence;
 using JobHunt.Api.Features.Pii;
 using Microsoft.EntityFrameworkCore;
@@ -23,6 +24,9 @@ public sealed class FollowUpService
 
     public async Task<FollowUpResult> DraftAsync(int applicationId, CancellationToken ct)
     {
+        using var activity = JobHuntTelemetry.ActivitySource.StartActivity("followup.draft");
+        activity?.SetTag("application.id", applicationId);
+
         await using var db = _contexts.CreateDbContext();
         var application = await db.Applications.FirstOrDefaultAsync(a => a.Id == applicationId, ct);
         if (application is null)
@@ -53,6 +57,7 @@ public sealed class FollowUpService
         application.UpdatedAt = DateTimeOffset.UtcNow;
         await db.SaveChangesAsync(ct);
 
+        activity?.SetTag("followup.send_after_days", rehydrated.SendAfterDays);
         return new FollowUpResult(FollowUpResultStatus.Succeeded, rehydrated, null);
     }
 }

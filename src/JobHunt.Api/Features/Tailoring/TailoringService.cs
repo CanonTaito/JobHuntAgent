@@ -1,4 +1,5 @@
 using JobHunt.Api.Features.Applications;
+using JobHunt.Api.Features.Observability;
 using JobHunt.Api.Features.Persistence;
 using JobHunt.Api.Features.Pii;
 using Microsoft.EntityFrameworkCore;
@@ -23,6 +24,9 @@ public sealed class TailoringService
 
     public async Task<TailoringDraft?> TailorAsync(int applicationId, CancellationToken ct)
     {
+        using var activity = JobHuntTelemetry.ActivitySource.StartActivity("tailoring.draft");
+        activity?.SetTag("application.id", applicationId);
+
         await using var db = _contexts.CreateDbContext();
         var application = await db.Applications.FirstOrDefaultAsync(a => a.Id == applicationId, ct);
         if (application is null)
@@ -44,6 +48,7 @@ public sealed class TailoringService
         application.UpdatedAt = DateTimeOffset.UtcNow;
         await db.SaveChangesAsync(ct);
 
+        activity?.SetTag("tailoring.bullets", rehydrated.ResumeBullets.Count);
         return rehydrated;
     }
 }

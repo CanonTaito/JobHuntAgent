@@ -15,6 +15,7 @@ The full roadmap lives in [PLAN.md](PLAN.md).
 | Chat provider | ollama (default) or OpenCode Zen — one config switch; both speak the OpenAI API via Microsoft.Extensions.AI.OpenAI |
 | Frontend | React 19 + TypeScript (Vite), oxlint |
 | Persistence | EF Core + SQLite |
+| Observability | OpenTelemetry (traces/metrics/logs) + health checks |
 
 ## Prerequisites
 
@@ -260,6 +261,29 @@ It returns a `subject`, a `body`, and a `sendAfterDays` hint (clamped to 3–21 
 | `POST` | `/api/applications/{id}/outcome` | records an outcome (`NoResponse`/`Interview`/`Offer`/`Rejected`/`Withdrawn`) for a submitted application; `409` if it has not been `Applied` |
 | `POST` | `/api/applications/{id}/follow-up` | drafts (and persists) a follow-up reminder — subject, body and a `sendAfterDays` hint — for an `Applied` application; `409` if it has not been `Applied` |
 | `GET` | `/api/applications/{id}/outcomes` | lists an application's recorded outcomes, newest first |
+| `GET` | `/health/live` | liveness probe — always `Healthy` if the process is up |
+| `GET` | `/health/ready` | readiness probe — `Healthy` only when the database is reachable |
+
+## Observability
+
+The API is instrumented with OpenTelemetry and ships health probes.
+
+**Health checks** — `/health/live` (process up) and `/health/ready` (database reachable via an EF Core check). Wire them to a container orchestrator or load balancer; both return `200 Healthy` in plain text.
+
+**Traces, metrics and logs** — emitted over OTLP to whatever collector you point it at (Jaeger, the Aspire dashboard, an OTel Collector). The standard OpenTelemetry environment variables configure it; with no collector running the exporters log and retry harmlessly.
+
+| Signal | What's captured |
+|--------|-----------------|
+| Traces | ASP.NET Core requests (health probes excluded), outbound HTTP, EF Core queries, and agent spans — `discovery.run` → `discovery.listing` → `match.score` / `salary.infer` (with `salary.probe`), plus `tailoring.draft` and `followup.draft` |
+| Metrics | ASP.NET Core, HttpClient and runtime metrics, plus `jobhunt.applications.discovered` (counter) and `jobhunt.match.score` (histogram) |
+| Logs | shipped over OTLP, correlated with the active trace |
+
+```bash
+# send everything to a local collector's OTLP/HTTP endpoint
+OTEL_EXPORTER_OTLP_ENDPOINT=http://localhost:4318 OTEL_EXPORTER_OTLP_PROTOCOL=http/protobuf dotnet run --project src/JobHunt.Api
+```
+
+Custom spans come from the `JobHunt.Agent` `ActivitySource` and metrics from the `JobHunt.Agent` meter — the names registered in `Program.cs`.
 
 ## Layout
 
@@ -275,6 +299,7 @@ src/
     Features/Jobs/        IJobSource connector seam + in-memory source
     Features/Jobs/Seek/   live SEEK search connector (throttled + cached) + mapper
     Features/Match/       GetProfile + ScoreJob agent tools for match scoring
+    Features/Observability/ OpenTelemetry ActivitySource + meters
     Features/Outcomes/    outcome memory store (EF-backed application outcomes)
     Features/Persistence/ EF Core SQLite context, migrations, registration
     Features/Pii/         PII placeholder engine (redact out, rehydrate back)
@@ -305,4 +330,4 @@ npm --prefix src/JobHunt.Web run build
 
 ## Roadmap
 
-Phases 1–4 in [PLAN.md](PLAN.md): match scoring against a candidate profile, a discovery → scoring → tailoring → approval → tracking pipeline with salary-band inference, outcome memory, and a live SEEK search connector — with OpenTelemetry and a test suite still to come.
+Phases 1–4 in [PLAN.md](PLAN.md): match scoring against a candidate profile, a discovery → scoring → tailoring → approval → tracking pipeline with salary-band inference, outcome memory, a live SEEK search connector, and OpenTelemetry tracing + health checks — with a test suite and CI still to come.

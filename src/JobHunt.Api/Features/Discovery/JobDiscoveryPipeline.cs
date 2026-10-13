@@ -1,6 +1,7 @@
 using JobHunt.Api.Features.Applications;
 using JobHunt.Api.Features.Jobs;
 using JobHunt.Api.Features.Match;
+using JobHunt.Api.Features.Observability;
 using JobHunt.Api.Features.Persistence;
 using JobHunt.Api.Features.Profile;
 using JobHunt.Api.Features.Salary;
@@ -16,6 +17,7 @@ public sealed class JobDiscoveryPipeline
     private readonly SalaryBandInference _salaryInference;
     private readonly CandidateProfile _profile;
     private readonly IDbContextFactory<JobHuntDbContext> _contexts;
+    private readonly JobHuntMetrics _metrics;
     private readonly ILogger<JobDiscoveryPipeline> _logger;
 
     public JobDiscoveryPipeline(
@@ -24,6 +26,7 @@ public sealed class JobDiscoveryPipeline
         SalaryBandInference salaryInference,
         CandidateProfile profile,
         IDbContextFactory<JobHuntDbContext> contexts,
+        JobHuntMetrics metrics,
         ILogger<JobDiscoveryPipeline> logger)
     {
         _source = source;
@@ -31,11 +34,16 @@ public sealed class JobDiscoveryPipeline
         _salaryInference = salaryInference;
         _profile = profile;
         _contexts = contexts;
+        _metrics = metrics;
         _logger = logger;
     }
 
     public async Task<DiscoveryReport> RunAsync(int maxResults, CancellationToken ct)
     {
+        using var activity = JobHuntTelemetry.ActivitySource.StartActivity("discovery.run");
+        activity?.SetTag("discovery.source", _source.Name);
+        activity?.SetTag("discovery.max_results", maxResults);
+
         var query = BuildQuery(maxResults);
         var listings = await _source.SearchAsync(query, ct);
 
@@ -57,6 +65,12 @@ public sealed class JobDiscoveryPipeline
                 skipped++;
                 continue;
             }
+
+            using var listingActivity = JobHuntTelemetry.ActivitySource.StartActivity("discovery.listing");
+            listingActivity?.SetTag("job.source", listing.Source);
+            listingActivity?.SetTag("job.id", listing.Id);
+            listingActivity?.SetTag("job.title", listing.Title);
+            listingActivity?.SetTag("job.company", listing.Company);
 
             var report = await _scorer.ScoreAsync(listing.Description, ct);
             var salary = await _salaryInference.InferAsync(listing, query, ct);
@@ -93,6 +107,11 @@ public sealed class JobDiscoveryPipeline
             await db.SaveChangesAsync(ct);
             seen.Add((listing.Source, listing.Id));
 
+            _metrics.ApplicationDiscovered(listing.Source);
+            listingActivity?.SetTag("job.overall_score", report.Overall);
+            listingActivity?.SetTag("job.salary_band", application.SalaryBand);
+            listingActivity?.SetTag("job.salary_source", application.SalarySource.ToString());
+
             items.Add(new DiscoveryItem
             {
                 ApplicationId = application.Id,
@@ -108,6 +127,10 @@ public sealed class JobDiscoveryPipeline
         _logger.LogInformation(
             "Discovery via {Source}: {Discovered} discovered, {Scored} scored, {Skipped} skipped",
             _source.Name, listings.Count, items.Count, skipped);
+
+        activity?.SetTag("discovery.discovered", listings.Count);
+        activity?.SetTag("discovery.scored", items.Count);
+        activity?.SetTag("discovery.skipped", skipped);
 
         return new DiscoveryReport
         {
