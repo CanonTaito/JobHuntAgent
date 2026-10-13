@@ -118,11 +118,5 @@ public sealed class JobDiscoveryPipeline
         };
     }
 
-    private JobSearchQuery BuildQuery(int maxResults) => new()
-    {
-        Keywords = _profile.Preferences.Roles,
-        Locations = _profile.Preferences.Locations,
-        WorkModels = _profile.Preferences.WorkModels,
-        MaxResults = maxResults,
-    };
+    private JobSearchQuery BuildQuery(int maxResults) => JobSearchQueryFactory.FromProfile(_profile, maxResults);
 }

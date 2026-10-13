@@ -18,6 +18,11 @@ public sealed class SalaryBandInference
             return new SalaryBandResult { Band = displayed, Source = SalarySource.Displayed };
         }
 
+        return await InferByProbingAsync(listing, context, ct);
+    }
+
+    public async Task<SalaryBandResult> InferByProbingAsync(JobListing listing, JobSearchQuery context, CancellationToken ct)
+    {
         foreach (var band in SalaryBand.All)
         {
             var probe = context with { SalaryMin = band.Min, SalaryMax = band.Max, MaxResults = ProbeLimit };

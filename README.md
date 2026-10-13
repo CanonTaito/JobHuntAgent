@@ -181,6 +181,18 @@ Many ads say "Salary undisclosed" yet still carry a hidden range used only to po
 
 Bands: **Under 80k · 80-99k · 100-119k · 120-149k · 150-199k · 200k+**. Run `POST /api/discover` and each new application is persisted with its inferred band; the tracker groups applications by it.
 
+The same engine runs against live SEEK ads: a probe becomes a `salaryrange=<min>-<max>` filter, and undisclosed ads come back labelled. Because the technique is a guess, it is **validated against ads that do state a salary** — their displayed band must equal the band the probe infers. `GET /api/salary/validate` samples the current source, re-infers each known-salary ad by probing (ignoring the displayed figure), and reports the agreement:
+
+```bash
+curl "http://localhost:5051/api/salary/validate?sample=10"
+```
+
+```json
+{ "sampled": 4, "knownSalary": 2, "validated": 2, "accurate": 2, "accuracy": 1.0,
+  "checks": [ { "sourceId": "…", "displayedBand": "80-99k", "inferredBand": "80-99k", "matched": true } ],
+  "inferred": [ { "sourceId": "…", "band": "120-149k", "source": "Inferred" } ] }
+```
+
 ## Approval gate
 
 The agent never applies to anything. Drafting only moves an application to `Tailored`; the agent cannot reach `Applied` on its own — that transition only happens when a human approves it. The lifecycle is:
@@ -237,6 +249,7 @@ It returns a `subject`, a `body`, and a `sendAfterDays` hint (clamped to 3–21 
 | `POST` | `/api/scan` | scans a raw job description (request body = text) and returns the structured analysis |
 | `POST` | `/api/match` | scores a raw job description against the profile (request body = text) — overall, embedding similarity, and the LLM breakdown |
 | `POST` | `/api/discover` | discovers listings from the job source, scores each new one, infers its salary band, and persists it; `?max=N` caps how many (default 5) |
+| `GET` | `/api/salary/validate` | samples the source and validates the salary-probe inference against ads that state a salary; `?sample=N` caps how many (default 10) |
 | `POST` | `/api/applications/{id}/tailor` | drafts tailored resume bullets and a cover letter for a stored application and persists them (status → `Tailored`); `404` if the id is unknown |
 | `GET` | `/api/applications` | lists applications best-first by learned `RankScore`; filter with `?status=Scored`, etc. — `400` for an unknown status |
 | `GET` | `/api/applications/ranking-insights` | the reply rate per salary band and work model that drives re-ranking |
@@ -267,7 +280,7 @@ src/
     Features/Pii/         PII placeholder engine (redact out, rehydrate back)
     Features/Profile/     candidate profile model + startup loader
     Features/Ranking/     outcome-memory insights + the re-ranker
-    Features/Salary/      salary-band model + displayed/inferred band inference engine
+    Features/Salary/      salary-band model, displayed/inferred inference engine + validator
     Features/Tailoring/   tailoring agent (resume bullets + cover letter) and service
     Program.cs            endpoints + DI composition root
     profile.sample.json   fictional sample profile (profile.json is yours, gitignored)

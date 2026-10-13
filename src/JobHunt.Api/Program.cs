@@ -30,6 +30,7 @@ builder.Services.AddSingleton<MatchAgent>();
 builder.Services.AddSingleton<EmbeddingScorer>();
 builder.Services.AddSingleton<MatchScorer>();
 builder.Services.AddSingleton<SalaryBandInference>();
+builder.Services.AddSingleton<SalaryInferenceValidator>();
 builder.Services.AddSingleton<JobDiscoveryPipeline>();
 builder.Services.AddSingleton<TailoringAgent>();
 builder.Services.AddSingleton<TailoringService>();
@@ -86,6 +87,9 @@ app.MapPost("/api/match", async (MatchScorer scorer, HttpRequest request, Cancel
 
 app.MapPost("/api/discover", async (JobDiscoveryPipeline pipeline, int? max, CancellationToken ct) =>
     Results.Ok(await pipeline.RunAsync(max ?? 5, ct)));
+
+app.MapGet("/api/salary/validate", async (SalaryInferenceValidator validator, int? sample, CancellationToken ct) =>
+    Results.Ok(await validator.ValidateAsync(sample ?? 10, ct)));
 
 app.MapPost("/api/applications/{id:int}/tailor", async (int id, TailoringService tailoring, CancellationToken ct) =>
 {
