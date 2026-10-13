@@ -9,6 +9,7 @@ using JobHunt.Api.Features.Outcomes;
 using JobHunt.Api.Features.Persistence;
 using JobHunt.Api.Features.Pii;
 using JobHunt.Api.Features.Profile;
+using JobHunt.Api.Features.Ranking;
 using JobHunt.Api.Features.Salary;
 using JobHunt.Api.Features.Tailoring;
 using Microsoft.EntityFrameworkCore;
@@ -34,6 +35,8 @@ builder.Services.AddSingleton<TailoringService>();
 builder.Services.AddSingleton<ApplicationQueries>();
 builder.Services.AddSingleton<ApprovalService>();
 builder.Services.AddSingleton<OutcomeStore>();
+builder.Services.AddSingleton<OutcomeInsightsService>();
+builder.Services.AddSingleton<MatchReRanker>();
 
 var app = builder.Build();
 
@@ -86,6 +89,9 @@ app.MapPost("/api/applications/{id:int}/tailor", async (int id, TailoringService
     var draft = await tailoring.TailorAsync(id, ct);
     return draft is null ? Results.NotFound() : Results.Ok(draft);
 });
+
+app.MapGet("/api/applications/ranking-insights", async (OutcomeInsightsService insights, CancellationToken ct) =>
+    Results.Ok(await insights.BuildAsync(ct)));
 
 app.MapGet("/api/applications", async (ApplicationQueries queries, string? status, CancellationToken ct) =>
 {

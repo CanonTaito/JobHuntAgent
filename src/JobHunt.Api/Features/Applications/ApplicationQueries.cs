@@ -1,4 +1,5 @@
 using JobHunt.Api.Features.Persistence;
+using JobHunt.Api.Features.Ranking;
 using Microsoft.EntityFrameworkCore;
 
 namespace JobHunt.Api.Features.Applications;
@@ -6,8 +7,18 @@ namespace JobHunt.Api.Features.Applications;
 public sealed class ApplicationQueries
 {
     private readonly IDbContextFactory<JobHuntDbContext> _contexts;
+    private readonly OutcomeInsightsService _insights;
+    private readonly MatchReRanker _reRanker;
 
-    public ApplicationQueries(IDbContextFactory<JobHuntDbContext> contexts) => _contexts = contexts;
+    public ApplicationQueries(
+        IDbContextFactory<JobHuntDbContext> contexts,
+        OutcomeInsightsService insights,
+        MatchReRanker reRanker)
+    {
+        _contexts = contexts;
+        _insights = insights;
+        _reRanker = reRanker;
+    }
 
     public async Task<IReadOnlyList<ApplicationView>> ListAsync(JobApplicationStatus? status, CancellationToken ct)
     {
@@ -20,11 +31,12 @@ public sealed class ApplicationQueries
         }
 
         var applications = await query.ToListAsync(ct);
+        var insights = await _insights.BuildAsync(ct);
 
         return applications
-            .OrderByDescending(a => a.OverallScore)
-            .ThenByDescending(a => a.DiscoveredAt)
-            .Select(ApplicationView.From)
+            .Select(application => Rank(ApplicationView.From(application), application, insights))
+            .OrderByDescending(view => view.RankScore ?? 0)
+            .ThenByDescending(view => view.DiscoveredAt)
             .ToList();
     }
 
@@ -35,6 +47,20 @@ public sealed class ApplicationQueries
             .AsNoTracking()
             .FirstOrDefaultAsync(a => a.Id == applicationId, ct);
 
-        return application is null ? null : ApplicationView.From(application);
+        if (application is null)
+        {
+            return null;
+        }
+
+        var insights = await _insights.BuildAsync(ct);
+        return Rank(ApplicationView.From(application), application, insights);
+    }
+
+    private ApplicationView Rank(ApplicationView view, JobApplication application, OutcomeInsights insights)
+    {
+        var ranking = _reRanker.Apply(
+            application.OverallScore, application.SalaryBand, application.WorkModel, insights);
+
+        return view with { RankScore = ranking.Score, RankReason = ranking.Reason };
     }
 }

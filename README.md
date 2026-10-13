@@ -164,7 +164,7 @@ Allowed transitions are declared in `ApplicationStatusTransitions`; any move tha
 
 ## Outcome memory
 
-Once an application is `Applied`, the agent remembers what happened to it so future matches can be re-ranked (next up: `3.2`). Outcomes are an append-only log, so a single application can progress — `NoResponse` → `Interview` → `Offer` — each step recorded with a timestamp and an optional note:
+Once an application is `Applied`, the agent remembers what happened to it. Outcomes are an append-only log, so a single application can progress — `NoResponse` → `Interview` → `Offer` — each step recorded with a timestamp and an optional note:
 
 ```
 POST /api/applications/1/outcome   { "outcome": "Interview", "note": "Recruiter call booked." }
@@ -172,6 +172,20 @@ GET  /api/applications/1/outcomes
 ```
 
 Outcomes can only be recorded for applications that were actually submitted (`Applied` or `Archived`) — recording one on a job that is merely `Scored` returns `409 Conflict`. Outcomes are stored locally and never sent to a model.
+
+## Learning (outcome re-ranking)
+
+Outcome memory feeds back into scoring. The read model builds reply-rate insights from the outcomes, and a `MatchReRanker` nudges each application's stored `OverallScore` toward the salary bands and work models that have actually produced replies (an `Interview` or `Offer` counts as a reply). The result is returned as `RankScore`, with a plain-English `RankReason`, and the list is ordered by it — so the stored score stays the model's raw judgement while the ranking reflects what has been working.
+
+It stays quiet until there is enough evidence: at least `MatchReRanker.MinimumApplications` applications with outcomes, and at least `MinimumBucketSamples` in a bucket before that bucket can move the score. Adjustments are capped at ±`MaxAdjustment` (15) so a small sample can't dominate.
+
+Inspect what the agent has learned:
+
+```bash
+curl http://localhost:5051/api/applications/ranking-insights
+```
+
+This returns the reply rate per band and per work model. See the effect on the board via `GET /api/applications`, which now carries `rankScore` (the re-ranked score) alongside `overallScore` (the raw one).
 
 ## Endpoints
 
@@ -185,7 +199,8 @@ Outcomes can only be recorded for applications that were actually submitted (`Ap
 | `POST` | `/api/match` | scores a raw job description against the profile (request body = text) — overall, embedding similarity, and the LLM breakdown |
 | `POST` | `/api/discover` | discovers listings from the job source, scores each new one, infers its salary band, and persists it; `?max=N` caps how many (default 5) |
 | `POST` | `/api/applications/{id}/tailor` | drafts tailored resume bullets and a cover letter for a stored application and persists them (status → `Tailored`); `404` if the id is unknown |
-| `GET` | `/api/applications` | lists applications ranked by score (best first); filter with `?status=Scored`, etc. — `400` for an unknown status |
+| `GET` | `/api/applications` | lists applications best-first by learned `RankScore`; filter with `?status=Scored`, etc. — `400` for an unknown status |
+| `GET` | `/api/applications/ranking-insights` | the reply rate per salary band and work model that drives re-ranking |
 | `GET` | `/api/applications/{id}` | reads one application; `status` and `salarySource` are strings, not enum numbers |
 | `POST` | `/api/applications/{id}/request-approval` | moves `Tailored → AwaitingApproval` (into the approval queue); `409` from any other state |
 | `POST` | `/api/applications/{id}/approve` | the human gate — `AwaitingApproval → Applied`; `409` from any other state |
@@ -209,6 +224,7 @@ src/
     Features/Persistence/ EF Core SQLite context, migrations, registration
     Features/Pii/         PII placeholder engine (redact out, rehydrate back)
     Features/Profile/     candidate profile model + startup loader
+    Features/Ranking/     outcome-memory insights + the re-ranker
     Features/Salary/      salary-band model + displayed/inferred band inference engine
     Features/Tailoring/   tailoring agent (resume bullets + cover letter) and service
     Program.cs            endpoints + DI composition root

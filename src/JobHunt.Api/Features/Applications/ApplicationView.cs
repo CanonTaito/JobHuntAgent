@@ -32,6 +32,10 @@ public sealed record ApplicationView
 
     public int? OverallScore { get; init; }
 
+    public int? RankScore { get; init; }
+
+    public string? RankReason { get; init; }
+
     public int? SimilarityScore { get; init; }
 
     public int? SkillsScore { get; init; }
@@ -71,6 +75,7 @@ public sealed record ApplicationView
         SalarySource = application.SalarySource.ToString(),
         Status = application.Status.ToString(),
         OverallScore = application.OverallScore,
+        RankScore = application.OverallScore,
         SimilarityScore = application.SimilarityScore,
         SkillsScore = application.SkillsScore,
         SeniorityScore = application.SeniorityScore,
