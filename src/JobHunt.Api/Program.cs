@@ -2,6 +2,7 @@ using JobHunt.Api.Ai;
 using JobHunt.Api.Features.Applications;
 using JobHunt.Api.Features.Approvals;
 using JobHunt.Api.Features.Discovery;
+using JobHunt.Api.Features.FollowUps;
 using JobHunt.Api.Features.JdScan;
 using JobHunt.Api.Features.Jobs;
 using JobHunt.Api.Features.Match;
@@ -37,6 +38,8 @@ builder.Services.AddSingleton<ApprovalService>();
 builder.Services.AddSingleton<OutcomeStore>();
 builder.Services.AddSingleton<OutcomeInsightsService>();
 builder.Services.AddSingleton<MatchReRanker>();
+builder.Services.AddSingleton<FollowUpAgent>();
+builder.Services.AddSingleton<FollowUpService>();
 
 var app = builder.Build();
 
@@ -141,6 +144,9 @@ app.MapGet("/api/applications/{id:int}/outcomes", async (int id, OutcomeStore ou
     return records is null ? Results.NotFound() : Results.Ok(records);
 });
 
+app.MapPost("/api/applications/{id:int}/follow-up", async (int id, FollowUpService followUps, CancellationToken ct) =>
+    ToFollowUpResult(await followUps.DraftAsync(id, ct)));
+
 app.Run();
 
 static IResult ToResult(ApplicationTransitionResult result) => result.Outcome switch
@@ -154,5 +160,12 @@ static IResult ToOutcomeResult(OutcomeResult result) => result.Status switch
 {
     OutcomeResultStatus.Succeeded => Results.Ok(result.Record),
     OutcomeResultStatus.NotFound => Results.NotFound(),
+    _ => Results.Conflict(new { error = result.Message }),
+};
+
+static IResult ToFollowUpResult(FollowUpResult result) => result.Status switch
+{
+    FollowUpResultStatus.Succeeded => Results.Ok(result.Draft),
+    FollowUpResultStatus.NotFound => Results.NotFound(),
     _ => Results.Conflict(new { error = result.Message }),
 };

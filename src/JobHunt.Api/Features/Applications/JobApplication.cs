@@ -52,6 +52,14 @@ public sealed class JobApplication
 
     public DateTimeOffset? TailoredAt { get; set; }
 
+    public string? FollowUpSubject { get; set; }
+
+    public string? FollowUpBody { get; set; }
+
+    public int? FollowUpSendAfterDays { get; set; }
+
+    public DateTimeOffset? FollowUpDraftedAt { get; set; }
+
     public DateOnly? PostedAt { get; set; }
 
     public DateTimeOffset DiscoveredAt { get; set; }

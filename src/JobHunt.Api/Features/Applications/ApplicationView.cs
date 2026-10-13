@@ -52,6 +52,14 @@ public sealed record ApplicationView
 
     public DateTimeOffset? TailoredAt { get; init; }
 
+    public string? FollowUpSubject { get; init; }
+
+    public string? FollowUpBody { get; init; }
+
+    public int? FollowUpSendAfterDays { get; init; }
+
+    public DateTimeOffset? FollowUpDraftedAt { get; init; }
+
     public DateOnly? PostedAt { get; init; }
 
     public DateTimeOffset DiscoveredAt { get; init; }
@@ -84,6 +92,10 @@ public sealed record ApplicationView
         TailoredBullets = SplitBullets(application.TailoredBullets),
         CoverLetter = application.CoverLetter,
         TailoredAt = application.TailoredAt,
+        FollowUpSubject = application.FollowUpSubject,
+        FollowUpBody = application.FollowUpBody,
+        FollowUpSendAfterDays = application.FollowUpSendAfterDays,
+        FollowUpDraftedAt = application.FollowUpDraftedAt,
         PostedAt = application.PostedAt,
         DiscoveredAt = application.DiscoveredAt,
         UpdatedAt = application.UpdatedAt,

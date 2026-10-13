@@ -40,6 +40,18 @@ namespace JobHunt.Api.Features.Persistence.Migrations
                     b.Property<int?>("FitScore")
                         .HasColumnType("INTEGER");
 
+                    b.Property<string>("FollowUpBody")
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTimeOffset?>("FollowUpDraftedAt")
+                        .HasColumnType("TEXT");
+
+                    b.Property<int?>("FollowUpSendAfterDays")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("FollowUpSubject")
+                        .HasColumnType("TEXT");
+
                     b.Property<string>("Location")
                         .HasColumnType("TEXT");
 

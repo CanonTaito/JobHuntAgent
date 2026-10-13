@@ -132,7 +132,7 @@ Two tables:
 
 | Table | Holds |
 |-------|-------|
-| `Applications` | discovered/scored listings, including `SalaryBand`, `SalarySource` (`Displayed`/`Inferred`), `Status`, the match scores (`OverallScore`, `SkillsScore`, …), and the tailored draft (`TailoredBullets`, `CoverLetter`, `TailoredAt`) |
+| `Applications` | discovered/scored listings, including `SalaryBand`, `SalarySource` (`Displayed`/`Inferred`), `Status`, the match scores (`OverallScore`, `SkillsScore`, …), the tailored draft (`TailoredBullets`, `CoverLetter`, `TailoredAt`), and the follow-up draft (`FollowUpSubject`, `FollowUpBody`, `FollowUpSendAfterDays`, `FollowUpDraftedAt`) |
 | `Outcomes` | the append-only outcome memory — one row per recorded result (`Outcome`, `Note`, `RecordedAt`) linked to its application |
 | `PiiMappings` | the placeholder ↔ real-value map from the privacy rule above — real values never leave this table, only placeholders reach the model |
 
@@ -187,6 +187,16 @@ curl http://localhost:5051/api/applications/ranking-insights
 
 This returns the reply rate per band and per work model. See the effect on the board via `GET /api/applications`, which now carries `rankScore` (the re-ranked score) alongside `overallScore` (the raw one).
 
+## Follow-ups
+
+For an application you have actually submitted (`Applied`), the agent can draft a follow-up reminder — a short, polite nudge to send if the employer goes quiet:
+
+```bash
+curl -X POST http://localhost:5051/api/applications/1/follow-up
+```
+
+It returns a `subject`, a `body`, and a `sendAfterDays` hint (clamped to 3–21 days), and persists all three on the application (`FollowUpSubject`, `FollowUpBody`, `FollowUpSendAfterDays`, `FollowUpDraftedAt`) so the board can surface it. Like tailoring, the draft is generated from the redacted profile plus the public job ad, then rehydrated before it is stored or shown — the model never sees your real details. Drafting is refused with `409 Conflict` unless the application is `Applied`.
+
 ## Endpoints
 
 | Method | Route | Purpose |
@@ -206,6 +216,7 @@ This returns the reply rate per band and per work model. See the effect on the b
 | `POST` | `/api/applications/{id}/approve` | the human gate — `AwaitingApproval → Applied`; `409` from any other state |
 | `POST` | `/api/applications/{id}/reject` | moves an active application to `Rejected`; `409` once `Applied`/`Archived` |
 | `POST` | `/api/applications/{id}/outcome` | records an outcome (`NoResponse`/`Interview`/`Offer`/`Rejected`/`Withdrawn`) for a submitted application; `409` if it has not been `Applied` |
+| `POST` | `/api/applications/{id}/follow-up` | drafts (and persists) a follow-up reminder — subject, body and a `sendAfterDays` hint — for an `Applied` application; `409` if it has not been `Applied` |
 | `GET` | `/api/applications/{id}/outcomes` | lists an application's recorded outcomes, newest first |
 
 ## Layout
@@ -217,6 +228,7 @@ src/
     Features/Applications/ the JobApplication entity, status enum, read model + queries
     Features/Approvals/   approval gate: status-transition policy + service
     Features/Discovery/   discovery → score → persist pipeline
+    Features/FollowUps/   follow-up reminder agent (subject, body, sendAfterDays) + service
     Features/JdScan/      the JD Scanner agent + result model + JSON parser
     Features/Jobs/        IJobSource connector seam + in-memory source
     Features/Match/       GetProfile + ScoreJob agent tools for match scoring
