@@ -339,3 +339,13 @@ npm --prefix src/JobHunt.Web run build
 ## Roadmap
 
 Phases 1–4 in [PLAN.md](PLAN.md): match scoring against a candidate profile, a discovery → scoring → tailoring → approval → tracking pipeline with salary-band inference, outcome memory, a live SEEK search connector, OpenTelemetry tracing + health checks, and an xUnit test suite — with CI still to come.
+## Architecture
+
+At a high level: a Minimal API (ASP.NET Core) plus a small React/Vite frontend. The API loads a candidate profile (PII-redacted in prompts), discovers jobs via IJobSource (in-memory for demo or SEEK live), scores matches (MAI agent + embeddings), infers salary bands (displayed or probed against the source), optionally tailors drafts, enforces an approval gate before marking Applied, and records outcomes for re-ranking. OpenTelemetry emits traces/metrics/logs over OTLP; health checks expose /health/live and /health/ready. The EF Core + SQLite database persists applications, outcomes and PII mappings.
+
+## Demo
+
+1. cp src/JobHunt.Api/profile.sample.json src/JobHunt.Api/profile.json (edit to your needs) and ollama pull gemma3:latest qwen2.5:3b nomic-embed-text:latest.
+2. dotnet run --project src/JobHunt.Api (http://localhost:5051). 
+pm --prefix src/JobHunt.Web run dev (http://localhost:5173).
+3. Scan a JD on the Scan page, then Match on the Match page, or Discover against the in-memory seed listings. Use the Tracker to move through Scored ? Shortlisted ? Tailored ? AwaitingApproval ? Applied, record outcomes, and generate follow-ups.
