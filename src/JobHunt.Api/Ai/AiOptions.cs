@@ -17,7 +17,16 @@ public sealed class ProviderOptions
 
     public string? ApiKey { get; set; }
 
+    public List<string> ApiKeys { get; set; } = [];
+
     public string ChatModel { get; set; } = string.Empty;
 
     public string EmbeddingModel { get; set; } = string.Empty;
+
+    public IReadOnlyList<string> EffectiveApiKeys =>
+        ApiKeys.Count > 0
+            ? ApiKeys
+            : string.IsNullOrWhiteSpace(ApiKey)
+                ? []
+                : [ApiKey];
 }

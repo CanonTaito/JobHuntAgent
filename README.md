@@ -85,9 +85,21 @@ All AI settings live under the `AI` section of `src/JobHunt.Api/appsettings.json
 | `AI:Providers:<name>:Endpoint` | — | OpenAI-compatible base URL |
 | `AI:Providers:<name>:ChatModel` | — | chat model served by that provider |
 | `AI:Providers:<name>:EmbeddingModel` | — | embedding model used for match scoring |
-| `AI:Providers:<name>:ApiKey` | — | per-provider secret (see `.env`) |
+| `AI:Providers:<name>:ApiKeys` | — | provider secrets, normally supplied by `.env` (see below) |
 
 The shipped default is `ollama` (`gemma3` for chat, `nomic-embed-text` for embeddings). Any OpenAI-compatible provider can be added as another `AI:Providers` entry and selected with `AI__Provider=<name>`.
+
+### Provider secrets in `.env`
+
+API keys belong in `.env` (gitignored), never in `appsettings.json`. Each provider reads one or more keys from `<NAME>_API_KEY` (single) or `<NAME>_API_KEYS` (several), which are mapped onto `AI:Providers:<name>:ApiKeys` in order:
+
+```bash
+GEMINI_API_KEY=...          # one key
+GROQ_API_KEYS=k1,k2         # comma-separated, tried in order
+GEMINI_API_KEYS=["k1","k2"] # JSON array form
+```
+
+`.env` keys use `:` as the configuration separator; real OS environment variables use `__`.
 
 ### Using OpenCode Zen instead of ollama
 

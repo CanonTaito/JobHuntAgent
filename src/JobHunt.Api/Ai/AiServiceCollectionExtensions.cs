@@ -31,6 +31,6 @@ public static class AiServiceCollectionExtensions
 
     private static OpenAIClient CreateClient(ProviderOptions provider) =>
         new(
-            new ApiKeyCredential(provider.ApiKey ?? string.Empty),
+            new ApiKeyCredential(provider.EffectiveApiKeys.FirstOrDefault() ?? string.Empty),
             new OpenAIClientOptions { Endpoint = new Uri(provider.Endpoint) });
 }
