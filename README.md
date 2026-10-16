@@ -95,7 +95,7 @@ All AI settings live under the `AI` section of `src/JobHunt.Api/appsettings.json
 
 The shipped default is `ollama` (`gemma3` for chat, `nomic-embed-text` for embeddings). Any OpenAI-compatible provider can be added as another `AI:Providers` entry and selected with `AI__Provider=<name>`.
 
-Chat calls retry transient failures (HTTP `429`, `5xx`, network and timeout errors) with exponential backoff, honouring a `Retry-After` header when the provider sends one. Permanent failures (`400`, `401`, `403`, and other `4xx`) fail immediately. The OpenAI SDK's own retry policy is disabled so this backoff is the single retry layer.
+Chat and embedding calls retry transient failures (HTTP `429`, `5xx`, network and timeout errors) with exponential backoff, honouring a `Retry-After` header when the provider sends one. Permanent failures (`400`, `401`, `403`, and other `4xx`) fail immediately. The OpenAI SDK's own retry policy is disabled so this backoff is the single retry layer.
 
 Match scoring normally runs as a tool-calling agent. Some chat models cannot call tools, so a provider marked `SupportsTools: false` automatically switches match scoring to a prompt-only agent that sends the redacted profile in the message and parses the JSON reply. The shipped `ollama` entry is marked this way because `gemma3` rejects tool calls; swap in a tool-capable model (see above) and flip the flag back on.
 
@@ -116,7 +116,7 @@ GROQ_API_KEYS=k1,k2         # comma-separated, tried in order
 GEMINI_API_KEYS=["k1","k2"] # JSON array form
 ```
 
-When a provider lists several keys, a chat call that exhausts its retries on one key advances to the next key before giving up; a `401`/`403` skips straight to the next key, while a permanent failure such as `400` stops immediately. Embeddings use only the first key. The startup also fails fast if a provider that `RequiresApiKey` (the default) has no key configured.
+When a provider lists several keys, a call that exhausts its retries on one key advances to the next key before giving up; a `401`/`403` skips straight to the next key, while a permanent failure such as `400` stops immediately. The startup also fails fast if a provider that `RequiresApiKey` (the default) has no key configured.
 
 `.env` keys use `:` as the configuration separator; real OS environment variables use `__`.
 
@@ -130,7 +130,7 @@ $env:AI__FallbackProviders__0 = "groq"
 $env:AI__FallbackProviders__1 = "ollama"
 ```
 
-A chat call works through the primary provider's keys first, then each fallback in order. It moves on after a key exhausts its retries or hits a `401`/`403`, and stops on a permanent failure such as `400`. A listed fallback with no key is skipped with a warning, so only providers you have actually configured are used. The primary provider must still be usable at startup, and embeddings do not fall back yet — they use the embedding provider's first key.
+A request works through the primary provider's keys first, then each fallback in order. It moves on after a key exhausts its retries or hits a `401`/`403`, and stops on a permanent failure such as `400`. A listed fallback with no key is skipped with a warning, so only providers you have actually configured are used. The primary provider must still be usable at startup. Embeddings follow the same chain; a fallback without an embedding model (Groq, for example) is skipped with a warning. Both texts of a match score are embedded in a single request, so a failover can never mix vectors from two different embedding models.
 
 ### Using OpenCode Zen instead of ollama
 

@@ -15,7 +15,7 @@ public static class AiServiceCollectionExtensions
         services.AddSingleton(options);
 
         var embeddingProvider = AiProviderResolver.ResolveEmbedding(options);
-        var embeddingKey = AiProviderKeys.Resolve(AiProviderResolver.EmbeddingProviderName(options), embeddingProvider)[0];
+        AiProviderKeys.Resolve(AiProviderResolver.EmbeddingProviderName(options), embeddingProvider);
 
         services.AddChatClient(serviceProvider =>
         {
@@ -33,8 +33,21 @@ public static class AiServiceCollectionExtensions
             return new FallbackChatClient(attempts, chatLogger);
         });
 
-        services.AddSingleton<IEmbeddingGenerator<string, Embedding<float>>>(_ =>
-            AiClientFactory.CreateEmbeddingGenerator(embeddingProvider, embeddingKey));
+        services.AddSingleton<IEmbeddingGenerator<string, Embedding<float>>>(serviceProvider =>
+        {
+            var loggerFactory = serviceProvider.GetRequiredService<ILoggerFactory>();
+            var embeddingLogger = loggerFactory.CreateLogger<FallbackEmbeddingGenerator>();
+            var retryLogger = loggerFactory.CreateLogger<RetryingEmbeddingGenerator>();
+
+            var attempts = AiEmbeddingPlanner.BuildAttempts(
+                options,
+                (provider, apiKey) => new RetryingEmbeddingGenerator(
+                    AiClientFactory.CreateEmbeddingGenerator(provider, apiKey),
+                    new AiRetryPolicy(options.Retry, retryLogger)),
+                (providerName, reason) => embeddingLogger.LogWarning("Skipping AI embedding fallback provider {Provider}: {Reason}", providerName, reason));
+
+            return new FallbackEmbeddingGenerator(attempts, embeddingLogger);
+        });
 
         return services;
     }

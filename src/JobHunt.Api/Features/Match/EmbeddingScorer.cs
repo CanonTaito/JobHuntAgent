@@ -20,9 +20,8 @@ public sealed class EmbeddingScorer
 
     public async Task<int> ScoreAsync(string jobDescription, CancellationToken ct)
     {
-        var profileEmbedding = await _generator.GenerateAsync(_profileText, options: null, ct);
-        var jobEmbedding = await _generator.GenerateAsync(jobDescription, options: null, ct);
-        var similarity = CosineSimilarity(profileEmbedding.Vector.Span, jobEmbedding.Vector.Span);
+        var embeddings = await _generator.GenerateAsync([_profileText, jobDescription], options: null, ct);
+        var similarity = CosineSimilarity(embeddings[0].Vector.Span, embeddings[1].Vector.Span);
         return Math.Clamp((int)Math.Round(similarity * 100), 0, 100);
     }
 
