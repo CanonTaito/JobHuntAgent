@@ -8,17 +8,14 @@ namespace JobHunt.Api.Features.Match;
 public static class MatchAgentFactory
 {
     public static IMatchAgent Create(
-        IServiceProvider serviceProvider,
         AiOptions options,
         IChatClient chatClient,
         MatchTools matchTools,
         ILoggerFactory loggerFactory)
     {
-        var providerName = options.Provider;
-        var providerOptions = AiProviderResolver.Resolve(options);
-        var supportsTools = AiProviderToolSupport.SupportsTools(options, providerName, providerOptions);
+        var provider = AiProviderResolver.Resolve(options);
 
-        if (!supportsTools)
+        if (!provider.SupportsTools)
         {
             return new NoToolMatchAgent(chatClient, matchTools, loggerFactory);
         }

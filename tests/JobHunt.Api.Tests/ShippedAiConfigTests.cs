@@ -51,6 +51,17 @@ public sealed class ShippedAiConfigTests
     }
 
     [Fact]
+    public void Marks_the_shipped_ollama_entry_as_tool_incapable()
+    {
+        var options = LoadShippedOptions();
+
+        Assert.False(AiProviderResolver.Resolve(options).SupportsTools);
+
+        options.Provider = "gemini";
+        Assert.True(AiProviderResolver.Resolve(options).SupportsTools);
+    }
+
+    [Fact]
     public void Ships_a_gemini_provider_with_chat_and_embedding_models()
     {
         var options = LoadShippedOptions();

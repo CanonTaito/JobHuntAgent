@@ -44,7 +44,7 @@ Open <http://localhost:5173>. The **Tracker** opens first — hit **Search jobs*
 Scanning and tailoring work with any chat model. **Match scoring and discovery** call agent tools, so they need a tool-capable model — e.g. `qwen2.5:3b`:
 
 ```bash
-AI__Ollama__ChatModel=qwen2.5:3b dotnet run --project src/JobHunt.Api
+AI__Ollama__ChatModel=qwen2.5:3b AI__Ollama__SupportsTools=true dotnet run --project src/JobHunt.Api
 ```
 
 Try the API directly:
@@ -88,6 +88,7 @@ All AI settings live under the `AI` section of `src/JobHunt.Api/appsettings.json
 | `AI:Providers:<name>:EmbeddingModel` | — | embedding model used for match scoring |
 | `AI:Providers:<name>:ApiKeys` | — | provider secrets, normally supplied by `.env` (see below) |
 | `AI:Providers:<name>:RequiresApiKey` | `true` | set to `false` for providers that need no credential (a placeholder key is sent) |
+| `AI:Providers:<name>:SupportsTools` | `true` | set to `false` when the model cannot call tools; match scoring then uses a prompt-only agent |
 | `AI:Retry:MaxAttempts` | `3` | total attempts before an AI call gives up |
 | `AI:Retry:BaseDelayMs` | `500` | first backoff delay; doubles on each subsequent attempt |
 | `AI:Retry:MaxDelayMs` | `8000` | upper bound on any backoff delay (also caps `Retry-After`) |
@@ -95,6 +96,8 @@ All AI settings live under the `AI` section of `src/JobHunt.Api/appsettings.json
 The shipped default is `ollama` (`gemma3` for chat, `nomic-embed-text` for embeddings). Any OpenAI-compatible provider can be added as another `AI:Providers` entry and selected with `AI__Provider=<name>`.
 
 Chat calls retry transient failures (HTTP `429`, `5xx`, network and timeout errors) with exponential backoff, honouring a `Retry-After` header when the provider sends one. Permanent failures (`400`, `401`, `403`, and other `4xx`) fail immediately. The OpenAI SDK's own retry policy is disabled so this backoff is the single retry layer.
+
+Match scoring normally runs as a tool-calling agent. Some chat models cannot call tools, so a provider marked `SupportsTools: false` automatically switches match scoring to a prompt-only agent that sends the redacted profile in the message and parses the JSON reply. The shipped `ollama` entry is marked this way because `gemma3` rejects tool calls; swap in a tool-capable model (see above) and flip the flag back on.
 
 | Provider | Chat model | Embeddings | Key (`.env`) |
 |----------|-----------|------------|--------------|

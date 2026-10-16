@@ -34,7 +34,6 @@ builder.Services.AddJobHuntDatabase(builder.Configuration, builder.Environment);
 builder.Services.AddSingleton<JdScannerAgent>();
 builder.Services.AddSingleton<MatchTools>();
 builder.Services.AddSingleton<IMatchAgent>(sp => MatchAgentFactory.Create(
-    sp,
     sp.GetRequiredService<AiOptions>(),
     sp.GetRequiredService<IChatClient>(),
     sp.GetRequiredService<MatchTools>(),
