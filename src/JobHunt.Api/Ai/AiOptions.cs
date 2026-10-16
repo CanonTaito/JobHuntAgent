@@ -1,3 +1,5 @@
+using JobHunt.Api.Ai.Retry;
+
 namespace JobHunt.Api.Ai;
 
 public sealed class AiOptions
@@ -7,6 +9,8 @@ public sealed class AiOptions
     public string Provider { get; set; } = "ollama";
 
     public string? EmbeddingProvider { get; set; }
+
+    public AiRetryOptions Retry { get; set; } = new();
 
     public Dictionary<string, ProviderOptions> Providers { get; set; } = new(StringComparer.OrdinalIgnoreCase);
 }

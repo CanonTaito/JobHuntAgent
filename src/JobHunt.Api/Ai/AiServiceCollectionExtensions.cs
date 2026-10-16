@@ -1,8 +1,11 @@
 using System.ClientModel;
+using System.ClientModel.Primitives;
 using JobHunt.Api.Ai.Providers;
+using JobHunt.Api.Ai.Retry;
 using Microsoft.Extensions.AI;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
 using OpenAI;
 
 namespace JobHunt.Api.Ai;
@@ -17,7 +20,15 @@ public static class AiServiceCollectionExtensions
         var chatProvider = AiProviderResolver.Resolve(options);
         var embeddingProvider = AiProviderResolver.ResolveEmbedding(options);
 
-        services.AddChatClient(_ => CreateChatClient(chatProvider));
+        services.AddChatClient(serviceProvider =>
+        {
+            var policy = new AiRetryPolicy(
+                options.Retry,
+                serviceProvider.GetRequiredService<ILoggerFactory>().CreateLogger<RetryingChatClient>());
+
+            return new RetryingChatClient(CreateChatClient(chatProvider), policy);
+        });
+
         services.AddSingleton<IEmbeddingGenerator<string, Embedding<float>>>(_ => CreateEmbeddingGenerator(embeddingProvider));
 
         return services;
@@ -32,5 +43,9 @@ public static class AiServiceCollectionExtensions
     private static OpenAIClient CreateClient(ProviderOptions provider) =>
         new(
             new ApiKeyCredential(provider.EffectiveApiKeys.FirstOrDefault() ?? string.Empty),
-            new OpenAIClientOptions { Endpoint = new Uri(provider.Endpoint) });
+            new OpenAIClientOptions
+            {
+                Endpoint = new Uri(provider.Endpoint),
+                RetryPolicy = new ClientRetryPolicy(0),
+            });
 }

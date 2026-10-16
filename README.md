@@ -86,8 +86,13 @@ All AI settings live under the `AI` section of `src/JobHunt.Api/appsettings.json
 | `AI:Providers:<name>:ChatModel` | — | chat model served by that provider |
 | `AI:Providers:<name>:EmbeddingModel` | — | embedding model used for match scoring |
 | `AI:Providers:<name>:ApiKeys` | — | provider secrets, normally supplied by `.env` (see below) |
+| `AI:Retry:MaxAttempts` | `3` | total attempts before an AI call gives up |
+| `AI:Retry:BaseDelayMs` | `500` | first backoff delay; doubles on each subsequent attempt |
+| `AI:Retry:MaxDelayMs` | `8000` | upper bound on any backoff delay (also caps `Retry-After`) |
 
 The shipped default is `ollama` (`gemma3` for chat, `nomic-embed-text` for embeddings). Any OpenAI-compatible provider can be added as another `AI:Providers` entry and selected with `AI__Provider=<name>`.
+
+Chat calls retry transient failures (HTTP `429`, `5xx`, network and timeout errors) with exponential backoff, honouring a `Retry-After` header when the provider sends one. Permanent failures (`400`, `401`, `403`, and other `4xx`) fail immediately. The OpenAI SDK's own retry policy is disabled so this backoff is the single retry layer.
 
 | Provider | Chat model | Embeddings | Key (`.env`) |
 |----------|-----------|------------|--------------|
