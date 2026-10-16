@@ -80,13 +80,13 @@ All AI settings live under the `AI` section of `src/JobHunt.Api/appsettings.json
 
 | Setting | Default | Notes |
 |---------|---------|-------|
-| `AI:Provider` | `ollama` | `ollama` or `zen` |
-| `AI:Ollama:Endpoint` | `http://localhost:11434/v1` | ollama's OpenAI-compatible endpoint |
-| `AI:Ollama:ChatModel` | `gemma3` | any chat model ollama has pulled |
-| `AI:Ollama:EmbeddingModel` | `nomic-embed-text` | used from Phase 1 for match scoring |
-| `AI:Zen:Endpoint` | `https://opencode.ai/zen/v1` | |
-| `AI:Zen:ChatModel` | `big-pickle` | |
-| `AI:Zen:ApiKey` | — | from `OPENCODE_ZEN_KEY` in `.env` |
+| `AI:Provider` | `ollama` | key of the active entry in `AI:Providers` |
+| `AI:Providers:<name>:Endpoint` | — | OpenAI-compatible base URL |
+| `AI:Providers:<name>:ChatModel` | — | chat model served by that provider |
+| `AI:Providers:<name>:EmbeddingModel` | — | embedding model used for match scoring |
+| `AI:Providers:<name>:ApiKey` | — | per-provider secret (see `.env`) |
+
+The shipped default is `ollama` (`gemma3` for chat, `nomic-embed-text` for embeddings). Any OpenAI-compatible provider can be added as another `AI:Providers` entry and selected with `AI__Provider=<name>`.
 
 ### Using OpenCode Zen instead of ollama
 

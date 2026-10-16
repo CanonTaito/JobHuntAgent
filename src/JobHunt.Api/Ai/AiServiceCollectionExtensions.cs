@@ -1,4 +1,5 @@
 using System.ClientModel;
+using JobHunt.Api.Ai.Providers;
 using Microsoft.Extensions.AI;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
@@ -13,51 +14,22 @@ public static class AiServiceCollectionExtensions
         var options = configuration.GetSection(AiOptions.SectionName).Get<AiOptions>() ?? new AiOptions();
         services.AddSingleton(options);
 
-        services.AddChatClient(_ => options.Provider.Equals("zen", StringComparison.OrdinalIgnoreCase)
-            ? CreateZenChatClient(options)
-            : CreateOllamaChatClient(options));
+        var provider = AiProviderResolver.Resolve(options);
 
-        services.AddSingleton<IEmbeddingGenerator<string, Embedding<float>>>(_ =>
-            options.Provider.Equals("zen", StringComparison.OrdinalIgnoreCase)
-                ? CreateZenEmbeddingGenerator(options)
-                : CreateOllamaEmbeddingGenerator(options));
+        services.AddChatClient(_ => CreateChatClient(provider));
+        services.AddSingleton<IEmbeddingGenerator<string, Embedding<float>>>(_ => CreateEmbeddingGenerator(provider));
 
         return services;
     }
 
-    private static IEmbeddingGenerator<string, Embedding<float>> CreateZenEmbeddingGenerator(AiOptions options)
-    {
-        var client = new OpenAIClient(
-            new ApiKeyCredential(options.Zen.ApiKey ?? string.Empty),
-            new OpenAIClientOptions { Endpoint = new Uri(options.Zen.Endpoint) });
+    private static IChatClient CreateChatClient(ProviderOptions provider) =>
+        CreateClient(provider).GetChatClient(provider.ChatModel).AsIChatClient();
 
-        return client.GetEmbeddingClient(options.Zen.EmbeddingModel).AsIEmbeddingGenerator(null);
-    }
+    private static IEmbeddingGenerator<string, Embedding<float>> CreateEmbeddingGenerator(ProviderOptions provider) =>
+        CreateClient(provider).GetEmbeddingClient(provider.EmbeddingModel).AsIEmbeddingGenerator(null);
 
-    private static IEmbeddingGenerator<string, Embedding<float>> CreateOllamaEmbeddingGenerator(AiOptions options)
-    {
-        var client = new OpenAIClient(
-            new ApiKeyCredential("ollama"),
-            new OpenAIClientOptions { Endpoint = new Uri(options.Ollama.Endpoint) });
-
-        return client.GetEmbeddingClient(options.Ollama.EmbeddingModel).AsIEmbeddingGenerator(null);
-    }
-
-    private static IChatClient CreateZenChatClient(AiOptions options)
-    {
-        var client = new OpenAIClient(
-            new ApiKeyCredential(options.Zen.ApiKey ?? string.Empty),
-            new OpenAIClientOptions { Endpoint = new Uri(options.Zen.Endpoint) });
-
-        return client.GetChatClient(options.Zen.ChatModel).AsIChatClient();
-    }
-
-    private static IChatClient CreateOllamaChatClient(AiOptions options)
-    {
-        var client = new OpenAIClient(
-            new ApiKeyCredential("ollama"),
-            new OpenAIClientOptions { Endpoint = new Uri(options.Ollama.Endpoint) });
-
-        return client.GetChatClient(options.Ollama.ChatModel).AsIChatClient();
-    }
+    private static OpenAIClient CreateClient(ProviderOptions provider) =>
+        new(
+            new ApiKeyCredential(provider.ApiKey ?? string.Empty),
+            new OpenAIClientOptions { Endpoint = new Uri(provider.Endpoint) });
 }

@@ -6,22 +6,16 @@ public sealed class AiOptions
 
     public string Provider { get; set; } = "ollama";
 
-    public ZenOptions Zen { get; set; } = new();
+    public Dictionary<string, ProviderOptions> Providers { get; set; } = new(StringComparer.OrdinalIgnoreCase);
+}
 
-    public OllamaOptions Ollama { get; set; } = new();
+public sealed class ProviderOptions
+{
+    public string Endpoint { get; set; } = string.Empty;
 
-    public sealed class ZenOptions
-    {
-        public string Endpoint { get; set; } = "https://opencode.ai/zen/v1";
-        public string ChatModel { get; set; } = "big-pickle";
-        public string EmbeddingModel { get; set; } = "text-embedding-3-small";
-        public string? ApiKey { get; set; }
-    }
+    public string? ApiKey { get; set; }
 
-    public sealed class OllamaOptions
-    {
-        public string Endpoint { get; set; } = "http://localhost:11434/v1";
-        public string ChatModel { get; set; } = "gemma3";
-        public string EmbeddingModel { get; set; } = "nomic-embed-text";
-    }
+    public string ChatModel { get; set; } = string.Empty;
+
+    public string EmbeddingModel { get; set; } = string.Empty;
 }

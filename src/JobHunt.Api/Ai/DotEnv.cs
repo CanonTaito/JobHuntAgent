@@ -37,7 +37,7 @@ public static class DotEnv
 
             if (key.Equals("OPENCODE_ZEN_KEY", StringComparison.OrdinalIgnoreCase))
             {
-                entries["AI:Zen:ApiKey"] = value;
+                entries["AI:Providers:zen:ApiKey"] = value;
             }
         }
 
