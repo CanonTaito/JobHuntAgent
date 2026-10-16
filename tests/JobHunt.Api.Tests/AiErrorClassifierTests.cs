@@ -87,4 +87,61 @@ public sealed class AiErrorClassifierTests
     [Fact]
     public void Does_not_retry_unrecognised_failures() =>
         Assert.False(AiErrorClassifier.IsRetryable(new InvalidOperationException("boom"), out _));
+
+    [Theory]
+    [InlineData(429)]
+    [InlineData(500)]
+    public void Advances_past_transient_failures(int status) =>
+        Assert.True(AiErrorClassifier.ShouldAdvance(HttpError(status)));
+
+    [Theory]
+    [InlineData(401)]
+    [InlineData(403)]
+    public void Advances_past_authentication_failures(int status) =>
+        Assert.True(AiErrorClassifier.ShouldAdvance(HttpError(status)));
+
+    [Theory]
+    [InlineData(400)]
+    [InlineData(404)]
+    [InlineData(422)]
+    public void Does_not_advance_past_permanent_failures(int status) =>
+        Assert.False(AiErrorClassifier.ShouldAdvance(HttpError(status)));
+
+    [Fact]
+    public void Advances_past_network_failures() =>
+        Assert.True(AiErrorClassifier.ShouldAdvance(new HttpRequestException("network")));
+
+    [Fact]
+    public void Does_not_advance_past_unrecognised_failures() =>
+        Assert.False(AiErrorClassifier.ShouldAdvance(new InvalidOperationException("boom")));
+
+    [Fact]
+    public void Advances_past_an_aggregate_of_transient_failures()
+    {
+        var exception = new AggregateException(
+            new ClientResultException(new FakePipelineResponse(503)),
+            new ClientResultException(new FakePipelineResponse(429)));
+
+        Assert.True(AiErrorClassifier.ShouldAdvance(exception));
+    }
+
+    [Fact]
+    public void Advances_past_an_aggregate_that_contains_an_authentication_failure()
+    {
+        var exception = new AggregateException(
+            new ClientResultException(new FakePipelineResponse(429)),
+            new ClientResultException(new FakePipelineResponse(401)));
+
+        Assert.True(AiErrorClassifier.ShouldAdvance(exception));
+    }
+
+    [Fact]
+    public void Does_not_advance_past_an_aggregate_that_contains_a_permanent_failure()
+    {
+        var exception = new AggregateException(
+            new ClientResultException(new FakePipelineResponse(401)),
+            new ClientResultException(new FakePipelineResponse(400)));
+
+        Assert.False(AiErrorClassifier.ShouldAdvance(exception));
+    }
 }

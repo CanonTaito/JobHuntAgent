@@ -23,6 +23,8 @@ public sealed class ProviderOptions
 
     public List<string> ApiKeys { get; set; } = [];
 
+    public bool RequiresApiKey { get; set; } = true;
+
     public string ChatModel { get; set; } = string.Empty;
 
     public string EmbeddingModel { get; set; } = string.Empty;

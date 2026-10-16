@@ -86,6 +86,7 @@ All AI settings live under the `AI` section of `src/JobHunt.Api/appsettings.json
 | `AI:Providers:<name>:ChatModel` | — | chat model served by that provider |
 | `AI:Providers:<name>:EmbeddingModel` | — | embedding model used for match scoring |
 | `AI:Providers:<name>:ApiKeys` | — | provider secrets, normally supplied by `.env` (see below) |
+| `AI:Providers:<name>:RequiresApiKey` | `true` | set to `false` for providers that accept keyless calls |
 | `AI:Retry:MaxAttempts` | `3` | total attempts before an AI call gives up |
 | `AI:Retry:BaseDelayMs` | `500` | first backoff delay; doubles on each subsequent attempt |
 | `AI:Retry:MaxDelayMs` | `8000` | upper bound on any backoff delay (also caps `Retry-After`) |
@@ -110,6 +111,8 @@ GEMINI_API_KEY=...          # one key
 GROQ_API_KEYS=k1,k2         # comma-separated, tried in order
 GEMINI_API_KEYS=["k1","k2"] # JSON array form
 ```
+
+When a provider lists several keys, a chat call that exhausts its retries on one key advances to the next key before giving up; a `401`/`403` skips straight to the next key, while a permanent failure such as `400` stops immediately. Embeddings use only the first key. The startup also fails fast if a provider that `RequiresApiKey` (the default) has no key configured.
 
 `.env` keys use `:` as the configuration separator; real OS environment variables use `__`.
 

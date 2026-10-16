@@ -6,39 +6,59 @@ namespace JobHunt.Api.Ai.Retry;
 
 public static class AiErrorClassifier
 {
-    public static bool IsRetryable(Exception exception, out TimeSpan? retryAfter)
+    private enum FailureKind
     {
-        retryAfter = null;
-        return Evaluate(exception, ref retryAfter);
+        Transient = 0,
+        Authentication = 1,
+        Permanent = 2,
     }
 
-    private static bool Evaluate(Exception exception, ref TimeSpan? retryAfter)
+    public static bool IsRetryable(Exception exception, out TimeSpan? retryAfter) =>
+        Classify(exception, out retryAfter) == FailureKind.Transient;
+
+    public static bool ShouldAdvance(Exception exception) =>
+        Classify(exception, out _) != FailureKind.Permanent;
+
+    private static FailureKind Classify(Exception exception, out TimeSpan? retryAfter)
+    {
+        TimeSpan? hint = null;
+        var kind = Evaluate(exception, ref hint);
+        retryAfter = hint;
+        return kind;
+    }
+
+    private static FailureKind Evaluate(Exception exception, ref TimeSpan? retryAfter)
     {
         switch (exception)
         {
             case AggregateException aggregate when aggregate.InnerExceptions.Count > 0:
+                var kind = FailureKind.Transient;
                 foreach (var inner in aggregate.InnerExceptions)
                 {
-                    if (!Evaluate(inner, ref retryAfter))
-                    {
-                        return false;
-                    }
+                    kind = (FailureKind)Math.Max((int)kind, (int)Evaluate(inner, ref retryAfter));
                 }
 
-                return true;
+                return kind;
             case ClientResultException clientException when clientException.Status > 0:
                 retryAfter ??= ReadRetryAfter(clientException.GetRawResponse());
-                return IsRetryableStatus(clientException.Status);
+                return ClassifyStatus(clientException.Status);
             case ClientResultException { InnerException: { } transportFailure }:
                 return Evaluate(transportFailure, ref retryAfter);
             case HttpRequestException:
             case TimeoutException:
             case OperationCanceledException:
-                return true;
+                return FailureKind.Transient;
             default:
-                return false;
+                return FailureKind.Permanent;
         }
     }
+
+    private static FailureKind ClassifyStatus(int status) =>
+        IsRetryableStatus(status)
+            ? FailureKind.Transient
+            : status is 401 or 403
+                ? FailureKind.Authentication
+                : FailureKind.Permanent;
 
     private static bool IsRetryableStatus(int status) =>
         status is 408 or 429 || status is >= 500 and <= 599;
