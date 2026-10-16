@@ -12,7 +12,7 @@ The full roadmap lives in [PLAN.md](PLAN.md).
 |-------|--------|
 | Backend | ASP.NET Core Minimal API (.NET 10) |
 | Agent orchestration | Microsoft Agent Framework (MAF) on Microsoft.Extensions.AI |
-| Chat provider | ollama (default) or OpenCode Zen — one config switch; both speak the OpenAI API via Microsoft.Extensions.AI.OpenAI |
+| Chat provider | any OpenAI-compatible endpoint selected with one `AI__Provider` switch; ollama (default), gemini, groq and OpenCode Zen ship as entries under `AI:Providers`, each with retry, multi-key rotation and cross-provider fallback, via Microsoft.Extensions.AI.OpenAI |
 | Frontend | React 19 + TypeScript (Vite), oxlint |
 | Persistence | EF Core + SQLite |
 | Observability | OpenTelemetry (traces/metrics/logs) + health checks |
@@ -179,7 +179,7 @@ Both ship under `AI:Providers`; you only need the key for the provider you pick.
 $env:AI__Provider = "groq"; $env:AI__EmbeddingProvider = "gemini"; dotnet run --project src/JobHunt.Api
 ```
 
-The API fails fast at startup if the selected embedding provider has no embedding model. Free tiers are rate limited, so large discovery runs can return `429` responses.
+The embedding chain starts at `AI:EmbeddingProvider` (or `AI:Provider` when it is unset), and that first provider must have an embedding model — fallbacks only run after it fails, so they cannot stand in for a missing model. The API fails fast at startup otherwise. Free tiers are rate limited, so large discovery runs can return `429` responses.
 
 **Privacy:** only `ollama` keeps everything on your machine. Any cloud provider sends redacted profile text and job ads to a third party — the placeholder substitution still applies, but the request leaves your machine.
 
@@ -346,7 +346,7 @@ The API is instrumented with OpenTelemetry and ships health probes.
 
 | Signal | What's captured |
 |--------|-----------------|
-| Traces | ASP.NET Core requests (health probes excluded), outbound HTTP, EF Core queries, and agent spans — `discovery.run` → `discovery.listing` → `match.score` / `salary.infer` (with `salary.probe`), plus `tailoring.draft` and `followup.draft`. A chat call that moves to another provider records a `provider.fallback` event on the active span |
+| Traces | ASP.NET Core requests (health probes excluded), outbound HTTP, EF Core queries, and agent spans — `discovery.run` → `discovery.listing` → `match.score` / `salary.infer` (with `salary.probe`), plus `tailoring.draft` and `followup.draft`. A chat or embedding call that moves to another provider records a `provider.fallback` event on the active span |
 | Metrics | ASP.NET Core, HttpClient and runtime metrics, plus `jobhunt.applications.discovered` (counter) and `jobhunt.match.score` (histogram) |
 | Logs | shipped over OTLP, correlated with the active trace |
 

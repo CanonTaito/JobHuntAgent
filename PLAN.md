@@ -40,13 +40,13 @@ Owning commits: `1.2` (placeholder engine, lands before the first commit that se
 |-------|--------|
 | Backend | ASP.NET Core Minimal API (.NET 10) |
 | Agent orchestration | Microsoft Agent Framework (MAF) on Microsoft.Extensions.AI |
-| Chat provider | ollama (default) or OpenCode Zen — one `AI__Provider` config switch; both speak the OpenAI API, wired via Microsoft.Extensions.AI.OpenAI |
+| Chat provider | any OpenAI-compatible endpoint selected with one `AI__Provider` switch; ollama (default), gemini, groq and OpenCode Zen ship as entries under `AI:Providers`, each with retry, multi-key rotation and cross-provider fallback, wired via Microsoft.Extensions.AI.OpenAI |
 | Frontend | React + TypeScript (Vite) |
 | Persistence | EF Core + SQLite |
 | Observability | OpenTelemetry + health checks (polish phase) |
 | CI | GitHub Actions (polish phase) |
 
-Defaults to local ollama for zero-cost, offline runs. Set `AI__Provider=zen` (plus `OPENCODE_ZEN_KEY`) to use OpenCode Zen (`big-pickle`). Caveat: Zen's free tier only answers calls made from inside opencode — external apps need a funded Console account or a local opencode server.
+Defaults to local ollama for zero-cost, offline runs. Providers are ordinary config entries: add an OpenAI-compatible endpoint under `AI:Providers` and point `AI__Provider` at it. Free-tier `gemini` and `groq` ship ready to use; `AI:FallbackProviders` chains several together, and `AI:EmbeddingProvider` mixes a chat provider with a different embedding provider. Every call retries transient failures, rotates through a provider's keys, and falls back to the next provider on failure. Caveat: Zen's free tier only answers calls made from inside opencode — external apps need a funded Console account or a local opencode server.
 
 ## Phased plan
 
