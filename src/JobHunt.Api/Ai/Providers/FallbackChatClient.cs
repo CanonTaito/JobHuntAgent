@@ -1,3 +1,4 @@
+using System.Diagnostics;
 using JobHunt.Api.Ai.Retry;
 using Microsoft.Extensions.AI;
 using Microsoft.Extensions.Logging;
@@ -41,11 +42,33 @@ public sealed class FallbackChatClient : IChatClient
             }
             catch (Exception exception) when (index < _attempts.Count - 1 && AiErrorClassifier.ShouldAdvance(exception))
             {
-                _logger.LogWarning(
-                    exception,
-                    "AI provider '{Provider}' key #{KeyIndex} failed; trying the next attempt.",
-                    attempt.ProviderName,
-                    attempt.KeyIndex);
+                var next = _attempts[index + 1];
+
+                if (string.Equals(next.ProviderName, attempt.ProviderName, StringComparison.OrdinalIgnoreCase))
+                {
+                    _logger.LogWarning(
+                        exception,
+                        "AI provider {Provider} key {KeyIndex} failed; trying key {NextKeyIndex}.",
+                        attempt.ProviderName,
+                        attempt.KeyIndex,
+                        next.KeyIndex);
+                }
+                else
+                {
+                    _logger.LogWarning(
+                        exception,
+                        "AI provider {Provider} failed; falling back to {NextProvider}.",
+                        attempt.ProviderName,
+                        next.ProviderName);
+
+                    Activity.Current?.AddEvent(new ActivityEvent(
+                        "provider.fallback",
+                        tags: new ActivityTagsCollection
+                        {
+                            { "provider", attempt.ProviderName },
+                            { "next.provider", next.ProviderName },
+                        }));
+                }
             }
         }
 

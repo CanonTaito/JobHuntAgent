@@ -36,6 +36,42 @@ public sealed class AiProviderKeysTests
     {
         var provider = new ProviderOptions { RequiresApiKey = false };
 
-        Assert.Equal([string.Empty], AiProviderKeys.Resolve("ollama", provider));
+        Assert.Equal([AiProviderKeys.KeylessApiKey], AiProviderKeys.Resolve("ollama", provider));
+    }
+
+    [Fact]
+    public void TryResolve_returns_the_configured_keys()
+    {
+        var provider = new ProviderOptions { ApiKeys = ["first", "second"] };
+
+        Assert.True(AiProviderKeys.TryResolve("gemini", provider, out var keys));
+        Assert.Equal(["first", "second"], keys);
+    }
+
+    [Fact]
+    public void TryResolve_reports_a_missing_required_key()
+    {
+        var provider = new ProviderOptions();
+
+        Assert.False(AiProviderKeys.TryResolve("gemini", provider, out var keys));
+        Assert.Empty(keys);
+    }
+
+    [Fact]
+    public void TryResolve_supplies_a_placeholder_key_when_a_key_is_not_required()
+    {
+        var provider = new ProviderOptions { RequiresApiKey = false };
+
+        Assert.True(AiProviderKeys.TryResolve("ollama", provider, out var keys));
+        Assert.Equal([AiProviderKeys.KeylessApiKey], keys);
+    }
+
+    [Fact]
+    public void Missing_key_message_names_the_env_var_and_the_setting()
+    {
+        var message = AiProviderKeys.MissingKeyMessage("gemini");
+
+        Assert.Contains("GEMINI_API_KEY", message);
+        Assert.Contains("AI:Providers:gemini:RequiresApiKey", message);
     }
 }

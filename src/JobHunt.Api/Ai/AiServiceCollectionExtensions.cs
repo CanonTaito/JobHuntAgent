@@ -14,26 +14,23 @@ public static class AiServiceCollectionExtensions
         var options = configuration.GetSection(AiOptions.SectionName).Get<AiOptions>() ?? new AiOptions();
         services.AddSingleton(options);
 
-        var chatProvider = AiProviderResolver.Resolve(options);
-        var chatKeys = AiProviderKeys.Resolve(options.Provider, chatProvider);
-
         var embeddingProvider = AiProviderResolver.ResolveEmbedding(options);
         var embeddingKey = AiProviderKeys.Resolve(AiProviderResolver.EmbeddingProviderName(options), embeddingProvider)[0];
 
         services.AddChatClient(serviceProvider =>
         {
             var loggerFactory = serviceProvider.GetRequiredService<ILoggerFactory>();
+            var chatLogger = loggerFactory.CreateLogger<FallbackChatClient>();
+            var retryLogger = loggerFactory.CreateLogger<RetryingChatClient>();
 
-            var attempts = chatKeys
-                .Select((key, index) => new AiChatAttempt(
-                    options.Provider,
-                    index,
-                    new RetryingChatClient(
-                        AiClientFactory.CreateChatClient(chatProvider, key),
-                        new AiRetryPolicy(options.Retry, loggerFactory.CreateLogger<RetryingChatClient>()))))
-                .ToList();
+            var attempts = AiChatPlanner.BuildAttempts(
+                options,
+                (provider, apiKey) => new RetryingChatClient(
+                    AiClientFactory.CreateChatClient(provider, apiKey),
+                    new AiRetryPolicy(options.Retry, retryLogger)),
+                (providerName, reason) => chatLogger.LogWarning("Skipping AI fallback provider {Provider}: {Reason}", providerName, reason));
 
-            return new FallbackChatClient(attempts, loggerFactory.CreateLogger<FallbackChatClient>());
+            return new FallbackChatClient(attempts, chatLogger);
         });
 
         services.AddSingleton<IEmbeddingGenerator<string, Embedding<float>>>(_ =>

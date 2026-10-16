@@ -2,22 +2,34 @@ namespace JobHunt.Api.Ai.Providers;
 
 public static class AiProviderKeys
 {
-    public static IReadOnlyList<string> Resolve(string providerName, ProviderOptions provider)
+    public const string KeylessApiKey = "keyless";
+
+    public static IReadOnlyList<string> Resolve(string providerName, ProviderOptions provider) =>
+        TryResolve(providerName, provider, out var keys)
+            ? keys
+            : throw new InvalidOperationException(MissingKeyMessage(providerName));
+
+    public static bool TryResolve(string providerName, ProviderOptions provider, out IReadOnlyList<string> keys)
     {
-        var keys = provider.EffectiveApiKeys;
-        if (keys.Count > 0)
+        var effective = provider.EffectiveApiKeys;
+        if (effective.Count > 0)
         {
-            return keys;
+            keys = effective;
+            return true;
         }
 
         if (provider.RequiresApiKey)
         {
-            throw new InvalidOperationException(
-                $"AI provider '{providerName}' requires an API key but none is configured. " +
-                $"Add '{providerName.ToUpperInvariant()}_API_KEY' to .env or set " +
-                $"'{AiOptions.SectionName}:Providers:{providerName}:{nameof(ProviderOptions.RequiresApiKey)}' to false.");
+            keys = [];
+            return false;
         }
 
-        return [string.Empty];
+        keys = [KeylessApiKey];
+        return true;
     }
+
+    public static string MissingKeyMessage(string providerName) =>
+        $"AI provider '{providerName}' requires an API key but none is configured. " +
+        $"Add '{providerName.ToUpperInvariant()}_API_KEY' to .env or set " +
+        $"'{AiOptions.SectionName}:Providers:{providerName}:{nameof(ProviderOptions.RequiresApiKey)}' to false.";
 }

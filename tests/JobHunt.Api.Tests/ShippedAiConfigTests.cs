@@ -43,6 +43,14 @@ public sealed class ShippedAiConfigTests
     }
 
     [Fact]
+    public void Ships_no_fallback_providers_by_default()
+    {
+        var options = LoadShippedOptions();
+
+        Assert.Empty(options.FallbackProviders);
+    }
+
+    [Fact]
     public void Ships_a_gemini_provider_with_chat_and_embedding_models()
     {
         var options = LoadShippedOptions();

@@ -32,6 +32,9 @@ public static class AiProviderResolver
     public static string EmbeddingProviderName(AiOptions options) =>
         string.IsNullOrWhiteSpace(options.EmbeddingProvider) ? options.Provider : options.EmbeddingProvider;
 
+    public static ProviderOptions ResolveFallback(AiOptions options, string providerName) =>
+        Resolve(options, providerName, nameof(AiOptions.FallbackProviders));
+
     private static ProviderOptions Resolve(AiOptions options, string providerName, string settingName)
     {
         if (options.Providers.Count == 0)

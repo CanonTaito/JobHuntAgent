@@ -8,6 +8,8 @@ public sealed class AiOptions
 
     public string Provider { get; set; } = "ollama";
 
+    public List<string> FallbackProviders { get; set; } = [];
+
     public string? EmbeddingProvider { get; set; }
 
     public AiRetryOptions Retry { get; set; } = new();

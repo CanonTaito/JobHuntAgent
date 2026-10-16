@@ -82,11 +82,12 @@ All AI settings live under the `AI` section of `src/JobHunt.Api/appsettings.json
 |---------|---------|-------|
 | `AI:Provider` | `ollama` | key of the active entry in `AI:Providers` |
 | `AI:EmbeddingProvider` | `AI:Provider` | provider used for embeddings; set this to mix a chat provider with a different embedding provider |
+| `AI:FallbackProviders` | (empty) | ordered provider names to try when the active provider keeps failing |
 | `AI:Providers:<name>:Endpoint` | — | OpenAI-compatible base URL |
 | `AI:Providers:<name>:ChatModel` | — | chat model served by that provider |
 | `AI:Providers:<name>:EmbeddingModel` | — | embedding model used for match scoring |
 | `AI:Providers:<name>:ApiKeys` | — | provider secrets, normally supplied by `.env` (see below) |
-| `AI:Providers:<name>:RequiresApiKey` | `true` | set to `false` for providers that accept keyless calls |
+| `AI:Providers:<name>:RequiresApiKey` | `true` | set to `false` for providers that need no credential (a placeholder key is sent) |
 | `AI:Retry:MaxAttempts` | `3` | total attempts before an AI call gives up |
 | `AI:Retry:BaseDelayMs` | `500` | first backoff delay; doubles on each subsequent attempt |
 | `AI:Retry:MaxDelayMs` | `8000` | upper bound on any backoff delay (also caps `Retry-After`) |
@@ -115,6 +116,18 @@ GEMINI_API_KEYS=["k1","k2"] # JSON array form
 When a provider lists several keys, a chat call that exhausts its retries on one key advances to the next key before giving up; a `401`/`403` skips straight to the next key, while a permanent failure such as `400` stops immediately. Embeddings use only the first key. The startup also fails fast if a provider that `RequiresApiKey` (the default) has no key configured.
 
 `.env` keys use `:` as the configuration separator; real OS environment variables use `__`.
+
+### Falling back across providers
+
+`AI:FallbackProviders` is an ordered list of extra providers to try when the active one cannot serve a request:
+
+```powershell
+$env:AI__Provider = "gemini"
+$env:AI__FallbackProviders__0 = "groq"
+$env:AI__FallbackProviders__1 = "ollama"
+```
+
+A chat call works through the primary provider's keys first, then each fallback in order. It moves on after a key exhausts its retries or hits a `401`/`403`, and stops on a permanent failure such as `400`. A listed fallback with no key is skipped with a warning, so only providers you have actually configured are used. The primary provider must still be usable at startup, and embeddings do not fall back yet — they use the embedding provider's first key.
 
 ### Using OpenCode Zen instead of ollama
 
@@ -330,7 +343,7 @@ The API is instrumented with OpenTelemetry and ships health probes.
 
 | Signal | What's captured |
 |--------|-----------------|
-| Traces | ASP.NET Core requests (health probes excluded), outbound HTTP, EF Core queries, and agent spans — `discovery.run` → `discovery.listing` → `match.score` / `salary.infer` (with `salary.probe`), plus `tailoring.draft` and `followup.draft` |
+| Traces | ASP.NET Core requests (health probes excluded), outbound HTTP, EF Core queries, and agent spans — `discovery.run` → `discovery.listing` → `match.score` / `salary.infer` (with `salary.probe`), plus `tailoring.draft` and `followup.draft`. A chat call that moves to another provider records a `provider.fallback` event on the active span |
 | Metrics | ASP.NET Core, HttpClient and runtime metrics, plus `jobhunt.applications.discovered` (counter) and `jobhunt.match.score` (histogram) |
 | Logs | shipped over OTLP, correlated with the active trace |
 
