@@ -20,6 +20,8 @@ public sealed class MatchTools
 
     public string GetProfile() => _profileJson;
 
+    public Task<string> GetProfileAsync(CancellationToken ct = default) => Task.FromResult(_profileJson);
+
     public async Task<string> ScoreJobAsync(string jobDescription, CancellationToken ct)
     {
         var userMessage = BuildPrompt(jobDescription);

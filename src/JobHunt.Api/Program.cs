@@ -33,8 +33,12 @@ builder.Services.AddJobSources(builder.Configuration);
 builder.Services.AddJobHuntDatabase(builder.Configuration, builder.Environment);
 builder.Services.AddSingleton<JdScannerAgent>();
 builder.Services.AddSingleton<MatchTools>();
-builder.Services.AddSingleton<MatchAgent>();
-builder.Services.AddSingleton<IMatchAgent>(sp => sp.GetRequiredService<MatchAgent>());
+builder.Services.AddSingleton<IMatchAgent>(sp => MatchAgentFactory.Create(
+    sp,
+    sp.GetRequiredService<AiOptions>(),
+    sp.GetRequiredService<IChatClient>(),
+    sp.GetRequiredService<MatchTools>(),
+    sp.GetRequiredService<ILoggerFactory>()));
 builder.Services.AddSingleton<EmbeddingScorer>();
 builder.Services.AddSingleton<MatchScorer>();
 builder.Services.AddSingleton<IMatchScorer>(sp => sp.GetRequiredService<MatchScorer>());

@@ -31,6 +31,8 @@ public sealed class ProviderOptions
 
     public string EmbeddingModel { get; set; } = string.Empty;
 
+    public bool SupportsTools { get; set; } = true;
+
     public IReadOnlyList<string> EffectiveApiKeys =>
         ApiKeys.Count > 0
             ? ApiKeys
