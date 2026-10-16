@@ -49,4 +49,37 @@ public sealed class AiProviderResolverTests
 
         Assert.Throws<InvalidOperationException>(() => AiProviderResolver.Resolve(options));
     }
+
+    [Fact]
+    public void Embedding_provider_defaults_to_the_chat_provider()
+    {
+        var options = Options("zen");
+
+        var resolved = AiProviderResolver.ResolveEmbedding(options);
+
+        Assert.Equal("big-pickle", resolved.ChatModel);
+    }
+
+    [Fact]
+    public void Embedding_provider_can_differ_from_the_chat_provider()
+    {
+        var options = Options("zen");
+        options.EmbeddingProvider = "ollama";
+
+        var resolved = AiProviderResolver.ResolveEmbedding(options);
+
+        Assert.Equal("http://localhost:11434/v1", resolved.Endpoint);
+    }
+
+    [Fact]
+    public void Throws_for_an_unknown_embedding_provider()
+    {
+        var options = Options("ollama");
+        options.EmbeddingProvider = "gemini";
+
+        var exception = Assert.Throws<InvalidOperationException>(() => AiProviderResolver.ResolveEmbedding(options));
+
+        Assert.Contains("gemini", exception.Message);
+        Assert.Contains("EmbeddingProvider", exception.Message);
+    }
 }

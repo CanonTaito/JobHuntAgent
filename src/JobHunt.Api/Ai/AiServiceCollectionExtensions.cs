@@ -14,10 +14,11 @@ public static class AiServiceCollectionExtensions
         var options = configuration.GetSection(AiOptions.SectionName).Get<AiOptions>() ?? new AiOptions();
         services.AddSingleton(options);
 
-        var provider = AiProviderResolver.Resolve(options);
+        var chatProvider = AiProviderResolver.Resolve(options);
+        var embeddingProvider = AiProviderResolver.ResolveEmbedding(options);
 
-        services.AddChatClient(_ => CreateChatClient(provider));
-        services.AddSingleton<IEmbeddingGenerator<string, Embedding<float>>>(_ => CreateEmbeddingGenerator(provider));
+        services.AddChatClient(_ => CreateChatClient(chatProvider));
+        services.AddSingleton<IEmbeddingGenerator<string, Embedding<float>>>(_ => CreateEmbeddingGenerator(embeddingProvider));
 
         return services;
     }

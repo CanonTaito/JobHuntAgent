@@ -6,6 +6,8 @@ public sealed class AiOptions
 
     public string Provider { get; set; } = "ollama";
 
+    public string? EmbeddingProvider { get; set; }
+
     public Dictionary<string, ProviderOptions> Providers { get; set; } = new(StringComparer.OrdinalIgnoreCase);
 }
 

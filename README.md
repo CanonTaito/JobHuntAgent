@@ -81,6 +81,7 @@ All AI settings live under the `AI` section of `src/JobHunt.Api/appsettings.json
 | Setting | Default | Notes |
 |---------|---------|-------|
 | `AI:Provider` | `ollama` | key of the active entry in `AI:Providers` |
+| `AI:EmbeddingProvider` | `AI:Provider` | provider used for embeddings; set this to mix a chat provider with a different embedding provider |
 | `AI:Providers:<name>:Endpoint` | — | OpenAI-compatible base URL |
 | `AI:Providers:<name>:ChatModel` | — | chat model served by that provider |
 | `AI:Providers:<name>:EmbeddingModel` | — | embedding model used for match scoring |
