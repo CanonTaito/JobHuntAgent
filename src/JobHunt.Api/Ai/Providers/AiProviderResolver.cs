@@ -5,11 +5,30 @@ public static class AiProviderResolver
     public static ProviderOptions Resolve(AiOptions options) =>
         Resolve(options, options.Provider, nameof(AiOptions.Provider));
 
-    public static ProviderOptions ResolveEmbedding(AiOptions options) =>
-        Resolve(
+    public static ProviderOptions ResolveEmbedding(AiOptions options)
+    {
+        var explicitProvider = !string.IsNullOrWhiteSpace(options.EmbeddingProvider);
+        var providerName = explicitProvider ? options.EmbeddingProvider! : options.Provider;
+
+        var provider = Resolve(
             options,
-            string.IsNullOrWhiteSpace(options.EmbeddingProvider) ? options.Provider : options.EmbeddingProvider,
-            nameof(AiOptions.EmbeddingProvider));
+            providerName,
+            explicitProvider ? nameof(AiOptions.EmbeddingProvider) : nameof(AiOptions.Provider));
+
+        if (string.IsNullOrWhiteSpace(provider.EmbeddingModel))
+        {
+            var withEmbeddings = options.Providers
+                .Where(pair => !string.IsNullOrWhiteSpace(pair.Value.EmbeddingModel))
+                .Select(pair => pair.Key);
+
+            throw new InvalidOperationException(
+                $"AI provider '{providerName}' does not provide an embedding model, so it cannot be used for " +
+                $"embeddings. Set '{AiOptions.SectionName}:{nameof(AiOptions.EmbeddingProvider)}' to a provider " +
+                $"that has one: {string.Join(", ", withEmbeddings)}.");
+        }
+
+        return provider;
+    }
 
     private static ProviderOptions Resolve(AiOptions options, string providerName, string settingName)
     {

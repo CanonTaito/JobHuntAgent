@@ -89,6 +89,13 @@ All AI settings live under the `AI` section of `src/JobHunt.Api/appsettings.json
 
 The shipped default is `ollama` (`gemma3` for chat, `nomic-embed-text` for embeddings). Any OpenAI-compatible provider can be added as another `AI:Providers` entry and selected with `AI__Provider=<name>`.
 
+| Provider | Chat model | Embeddings | Key (`.env`) |
+|----------|-----------|------------|--------------|
+| `ollama` (default) | `gemma3` | `nomic-embed-text` | — (local) |
+| `gemini` | `gemini-2.5-flash` | `gemini-embedding-001` | `GEMINI_API_KEY` |
+| `groq` | `llama-3.3-70b-versatile` | — | `GROQ_API_KEY` |
+| `zen` | `big-pickle` | `text-embedding-3-small` | `OPENCODE_ZEN_KEY` |
+
 ### Provider secrets in `.env`
 
 API keys belong in `.env` (gitignored), never in `appsettings.json`. Each provider reads one or more keys from `<NAME>_API_KEY` (single) or `<NAME>_API_KEYS` (several), which are mapped onto `AI:Providers:<name>:ApiKeys` in order:
@@ -124,6 +131,33 @@ GEMINI_API_KEYS=["k1","k2"] # JSON array form
    Caveat: Zen's free tier only answers calls made from inside opencode. External apps need a funded Console account, so ollama stays the default.
 
 The API also walks up from `src/JobHunt.Api` looking for a `.env`, so the key is picked up without extra setup.
+
+### Free-tier providers: Gemini and Groq
+
+Both ship under `AI:Providers`; you only need the key for the provider you pick.
+
+1. Add your key to `.env` (gitignored):
+
+   ```bash
+   GEMINI_API_KEY=...   # https://aistudio.google.com/apikey
+   GROQ_API_KEY=...     # https://console.groq.com/keys
+   ```
+
+2. Select the provider for one run:
+
+   ```powershell
+   $env:AI__Provider = "gemini"; dotnet run --project src/JobHunt.Api
+   ```
+
+**Groq has no embeddings.** Match scoring needs an embedding model, so pair Groq's chat with a provider that has one:
+
+```powershell
+$env:AI__Provider = "groq"; $env:AI__EmbeddingProvider = "gemini"; dotnet run --project src/JobHunt.Api
+```
+
+The API fails fast at startup if the selected embedding provider has no embedding model. Free tiers are rate limited, so large discovery runs can return `429` responses.
+
+**Privacy:** only `ollama` keeps everything on your machine. Any cloud provider sends redacted profile text and job ads to a third party — the placeholder substitution still applies, but the request leaves your machine.
 
 ## Candidate profile
 

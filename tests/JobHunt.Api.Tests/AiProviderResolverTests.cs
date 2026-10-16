@@ -10,8 +10,8 @@ public sealed class AiProviderResolverTests
         Provider = provider,
         Providers =
         {
-            ["ollama"] = new ProviderOptions { Endpoint = "http://localhost:11434/v1", ChatModel = "gemma3" },
-            ["zen"] = new ProviderOptions { Endpoint = "https://opencode.ai/zen/v1", ChatModel = "big-pickle" },
+            ["ollama"] = new ProviderOptions { Endpoint = "http://localhost:11434/v1", ChatModel = "gemma3", EmbeddingModel = "nomic-embed-text" },
+            ["zen"] = new ProviderOptions { Endpoint = "https://opencode.ai/zen/v1", ChatModel = "big-pickle", EmbeddingModel = "text-embedding-3-small" },
         },
     };
 
@@ -81,5 +81,44 @@ public sealed class AiProviderResolverTests
 
         Assert.Contains("gemini", exception.Message);
         Assert.Contains("EmbeddingProvider", exception.Message);
+    }
+
+    [Fact]
+    public void Throws_when_the_embedding_provider_has_no_embedding_model()
+    {
+        var options = new AiOptions
+        {
+            Provider = "groq",
+            Providers =
+            {
+                ["groq"] = new ProviderOptions { Endpoint = "https://api.groq.com/openai/v1", ChatModel = "llama-3.3-70b-versatile" },
+                ["gemini"] = new ProviderOptions { Endpoint = "https://generativelanguage.googleapis.com/v1beta/openai/", ChatModel = "gemini-2.5-flash", EmbeddingModel = "gemini-embedding-001" },
+            },
+        };
+
+        var exception = Assert.Throws<InvalidOperationException>(() => AiProviderResolver.ResolveEmbedding(options));
+
+        Assert.Contains("groq", exception.Message);
+        Assert.Contains("EmbeddingProvider", exception.Message);
+        Assert.Contains("gemini", exception.Message);
+    }
+
+    [Fact]
+    public void Allows_a_separate_embedding_provider_when_the_chat_provider_has_none()
+    {
+        var options = new AiOptions
+        {
+            Provider = "groq",
+            EmbeddingProvider = "gemini",
+            Providers =
+            {
+                ["groq"] = new ProviderOptions { Endpoint = "https://api.groq.com/openai/v1", ChatModel = "llama-3.3-70b-versatile" },
+                ["gemini"] = new ProviderOptions { Endpoint = "https://generativelanguage.googleapis.com/v1beta/openai/", ChatModel = "gemini-2.5-flash", EmbeddingModel = "gemini-embedding-001" },
+            },
+        };
+
+        var resolved = AiProviderResolver.ResolveEmbedding(options);
+
+        Assert.Equal("gemini-embedding-001", resolved.EmbeddingModel);
     }
 }
