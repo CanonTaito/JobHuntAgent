@@ -65,7 +65,7 @@ public sealed class ResumeTextExtractorTests
     public void Registering_extraction_resolves_the_composite()
     {
         using var provider = new ServiceCollection()
-            .AddResumeTextExtraction()
+            .AddResumeParsing()
             .BuildServiceProvider();
 
         var extractor = provider.GetRequiredService<ResumeTextExtractor>();

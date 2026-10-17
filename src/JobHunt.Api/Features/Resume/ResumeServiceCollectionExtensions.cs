@@ -4,7 +4,7 @@ namespace JobHunt.Api.Features.Resume;
 
 public static class ResumeServiceCollectionExtensions
 {
-    public static IServiceCollection AddResumeTextExtraction(this IServiceCollection services)
+    public static IServiceCollection AddResumeParsing(this IServiceCollection services)
     {
         services.AddSingleton<PlainTextResumeExtractor>();
         services.AddSingleton<IResumeTextExtractor>(sp => sp.GetRequiredService<PlainTextResumeExtractor>());
@@ -13,6 +13,7 @@ public static class ResumeServiceCollectionExtensions
         services.AddSingleton<DocxResumeTextExtractor>();
         services.AddSingleton<IResumeTextExtractor>(sp => sp.GetRequiredService<DocxResumeTextExtractor>());
         services.AddSingleton<ResumeTextExtractor>();
+        services.AddSingleton<ResumeParserAgent>();
 
         return services;
     }

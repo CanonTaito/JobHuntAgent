@@ -30,7 +30,7 @@ DotEnv.LoadInto(builder.Configuration);
 builder.Services.AddJobHuntAi(builder.Configuration);
 builder.Services.AddCandidateProfile(builder.Configuration, builder.Environment);
 builder.Services.AddPiiProtection();
-builder.Services.AddResumeTextExtraction();
+builder.Services.AddResumeParsing();
 builder.Services.AddJobSources(builder.Configuration);
 builder.Services.AddJobHuntDatabase(builder.Configuration, builder.Environment);
 builder.Services.AddSingleton<JdScannerAgent>();

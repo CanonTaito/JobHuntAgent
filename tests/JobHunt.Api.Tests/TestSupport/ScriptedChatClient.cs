@@ -10,12 +10,15 @@ internal sealed class ScriptedChatClient : IChatClient
 
     public int Calls { get; private set; }
 
+    public IReadOnlyList<ChatMessage> LastMessages { get; private set; } = [];
+
     public Task<ChatResponse> GetResponseAsync(
         IEnumerable<ChatMessage> messages,
         ChatOptions? options = null,
         CancellationToken cancellationToken = default)
     {
         Calls++;
+        LastMessages = messages.ToList();
 
         if (_replies.Count == 0)
         {
