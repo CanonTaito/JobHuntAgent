@@ -1,6 +1,4 @@
-using JobHunt.Api.Features.Pii;
-
-namespace JobHunt.Api.Tests.TestSupport;
+namespace JobHunt.Api.Features.Pii;
 
 public sealed class InMemoryPiiMappingStore : IPiiMappingStore
 {
