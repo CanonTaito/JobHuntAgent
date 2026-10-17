@@ -39,6 +39,12 @@ public static class ProfileServiceCollectionExtensions
         return services;
     }
 
+    public static IServiceCollection AddProfileStore(this IServiceCollection services)
+    {
+        services.AddSingleton<IProfileStore, EfProfileStore>();
+        return services;
+    }
+
     private static string ResolvePath(IConfiguration configuration, IHostEnvironment environment)
     {
         var configured = configuration[$"{SectionName}:Path"];

@@ -179,6 +179,24 @@ namespace JobHunt.Api.Features.Persistence.Migrations
                     b.ToTable("PiiMappings");
                 });
 
+            modelBuilder.Entity("JobHunt.Api.Features.Profile.ProfileRecord", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("Json")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTimeOffset>("UpdatedAt")
+                        .HasColumnType("TEXT");
+
+                    b.HasKey("Id");
+
+                    b.ToTable("Profiles");
+                });
+
             modelBuilder.Entity("JobHunt.Api.Features.Outcomes.OutcomeRecord", b =>
                 {
                     b.HasOne("JobHunt.Api.Features.Applications.JobApplication", null)

@@ -29,6 +29,7 @@ var builder = WebApplication.CreateBuilder(args);
 DotEnv.LoadInto(builder.Configuration);
 builder.Services.AddJobHuntAi(builder.Configuration);
 builder.Services.AddCandidateProfile(builder.Configuration, builder.Environment);
+builder.Services.AddProfileStore();
 builder.Services.AddPiiProtection();
 builder.Services.AddResumeParsing();
 builder.Services.AddJobSources(builder.Configuration);
@@ -95,10 +96,10 @@ app.MapGet("/api/ai/ping", async (IChatClient chat, CancellationToken ct) =>
     return Results.Ok(new { message = response.Text.Trim() });
 });
 
-app.MapGet("/api/profile", (CandidateProfile profile) => Results.Ok(profile));
+app.MapGet("/api/profile", (IProfileStore profiles) => Results.Ok(profiles.Current));
 
-app.MapGet("/api/profile/redacted", (CandidateProfile profile, PiiRedactor redactor) =>
-    Results.Ok(redactor.Redact(profile)));
+app.MapGet("/api/profile/redacted", (IProfileStore profiles, PiiRedactor redactor) =>
+    Results.Ok(redactor.Redact(profiles.Current)));
 
 app.MapPost("/api/scan", async (JdScannerAgent scanner, HttpRequest request, CancellationToken ct) =>
 {
@@ -122,7 +123,7 @@ app.MapPost("/api/match", async (MatchScorer scorer, HttpRequest request, Cancel
     return Results.Ok(await scorer.ScoreAsync(jd, ct));
 });
 
-app.MapPost("/api/resume", async (HttpRequest request, ResumeTextExtractor extractor, ResumeParserAgent parser, CancellationToken ct) =>
+app.MapPost("/api/resume", async (HttpRequest request, ResumeTextExtractor extractor, ResumeParserAgent parser, IProfileStore profiles, CancellationToken ct) =>
 {
     if (!request.HasFormContentType)
     {
@@ -152,7 +153,9 @@ app.MapPost("/api/resume", async (HttpRequest request, ResumeTextExtractor extra
     {
         await using var stream = file.OpenReadStream();
         var text = await extractor.ExtractAsync(stream, file.FileName, ct);
-        return Results.Ok(await parser.ParseAsync(text, name, ct));
+        var profile = await parser.ParseAsync(text, name, ct);
+        await profiles.SaveAsync(profile, ct);
+        return Results.Ok(profile);
     }
     catch (NotSupportedException e)
     {

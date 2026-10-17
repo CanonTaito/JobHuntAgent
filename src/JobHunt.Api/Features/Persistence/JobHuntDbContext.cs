@@ -1,6 +1,7 @@
 using JobHunt.Api.Features.Applications;
 using JobHunt.Api.Features.Outcomes;
 using JobHunt.Api.Features.Pii;
+using JobHunt.Api.Features.Profile;
 using Microsoft.EntityFrameworkCore;
 
 namespace JobHunt.Api.Features.Persistence;
@@ -17,6 +18,8 @@ public sealed class JobHuntDbContext : DbContext
     public DbSet<OutcomeRecord> Outcomes => Set<OutcomeRecord>();
 
     public DbSet<PiiMappingRecord> PiiMappings => Set<PiiMappingRecord>();
+
+    public DbSet<ProfileRecord> Profiles => Set<ProfileRecord>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -37,5 +40,8 @@ public sealed class JobHuntDbContext : DbContext
         var piiMappings = modelBuilder.Entity<PiiMappingRecord>();
         piiMappings.HasIndex(m => m.Value).IsUnique();
         piiMappings.HasIndex(m => m.Placeholder).IsUnique();
+
+        var profiles = modelBuilder.Entity<ProfileRecord>();
+        profiles.Property(p => p.Json).IsRequired();
     }
 }
