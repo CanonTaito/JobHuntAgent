@@ -57,4 +57,32 @@ public sealed class PiiRedactorTests
     {
         Assert.Equal("We build APIs.", Redactor(Profile).Redact("We build APIs."));
     }
+
+    [Theory]
+    [InlineData("Email me at jordan.avery@example.com", "Email me at [EMAIL]")]
+    [InlineData("Reach me: jordan+resume@sub.example.com.au", "Reach me: [EMAIL]")]
+    public void Replaces_email_addresses(string input, string expected)
+    {
+        Assert.Equal(expected, Redactor(Profile).Redact(input));
+    }
+
+    [Theory]
+    [InlineData("Call 0421 123 456", "Call [PHONE]")]
+    [InlineData("Call 0421123456", "Call [PHONE]")]
+    [InlineData("Call +61 421 123 456", "Call [PHONE]")]
+    [InlineData("Call (07) 3123 4567", "Call [PHONE]")]
+    public void Replaces_phone_numbers(string input, string expected)
+    {
+        Assert.Equal(expected, Redactor(Profile).Redact(input));
+    }
+
+    [Theory]
+    [InlineData("Worked there 2018-2020")]
+    [InlineData("Worked there 2020 – 2023")]
+    [InlineData("Budget of 150,000")]
+    [InlineData("Runs .NET 10 on SQL Server 2022")]
+    public void Leaves_non_phone_numbers_untouched(string text)
+    {
+        Assert.Equal(text, Redactor(Profile).Redact(text));
+    }
 }

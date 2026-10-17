@@ -1,4 +1,5 @@
 using System.Text;
+using System.Text.RegularExpressions;
 using JobHunt.Api.Features.Profile;
 using Microsoft.Extensions.Logging;
 
@@ -6,6 +7,14 @@ namespace JobHunt.Api.Features.Pii;
 
 public sealed class PiiRedactor
 {
+    private static readonly Regex EmailPattern = new(
+        @"[A-Za-z0-9._%+\-]+@[A-Za-z0-9.\-]+\.[A-Za-z]{2,}",
+        RegexOptions.Compiled);
+
+    private static readonly Regex PhonePattern = new(
+        @"[(\+]?\d[\d\s().\-]{6,}\d",
+        RegexOptions.Compiled);
+
     private readonly PiiMapping[] _redactOrder;
     private readonly Dictionary<string, string> _rehydrate;
 
@@ -34,6 +43,8 @@ public sealed class PiiRedactor
         {
             return text;
         }
+
+        text = ScrubContacts(text);
 
         foreach (var mapping in _redactOrder)
         {
@@ -133,6 +144,27 @@ public sealed class PiiRedactor
                 yield return (education.Institution.Trim(), $"[INSTITUTION_{index}]");
             }
         }
+    }
+
+    private static string ScrubContacts(string text)
+    {
+        text = EmailPattern.Replace(text, "[EMAIL]");
+        return PhonePattern.Replace(text, match =>
+            CountDigits(match.Value) is >= 9 and <= 11 ? "[PHONE]" : match.Value);
+    }
+
+    private static int CountDigits(string value)
+    {
+        var count = 0;
+        foreach (var character in value)
+        {
+            if (char.IsDigit(character))
+            {
+                count++;
+            }
+        }
+
+        return count;
     }
 
     private static string ReplaceToken(string text, string value, string placeholder)
