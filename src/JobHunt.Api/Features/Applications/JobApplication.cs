@@ -50,6 +50,9 @@ public sealed class JobApplication
 
     public string? CoverLetter { get; set; }
 
+    // JSON-serialized CandidateProfile produced by the tailoring agent (optional)
+    public string? TailoredProfileJson { get; set; }
+
     public DateTimeOffset? TailoredAt { get; set; }
 
     public string? FollowUpSubject { get; set; }

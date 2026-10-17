@@ -11,6 +11,35 @@ public sealed class TailoringAgent
 {
     private const int MaxAttempts = 3;
 
+    private const string CoverLetterTemplate = """
+        {{CANDIDATE_NAME}}
+        {{LOCATION}}
+        {{PHONE}} | {{EMAIL}}
+
+
+        {{DATE}}
+
+
+        {{COMPANY_NAME}}
+        RE: {{JOB_TITLE}}
+
+        Dear {{SALUTATION}},
+
+        {{OPENING_PARAGRAPH}}
+
+        {{BODY_PARAGRAPH_1}}
+
+        {{BODY_PARAGRAPH_2}}
+
+        {{CLOSING_PARAGRAPH}}
+
+        Thank you for your consideration.
+
+
+        {{CANDIDATE_NAME}}
+
+        """;
+
     private const string Instructions = """
         You are a career coach that tailors application material for one specific job.
 
@@ -25,7 +54,8 @@ public sealed class TailoringAgent
         matching this exact schema:
         {
           "resumeBullets": ["First tailored bullet.", "Second tailored bullet."],
-          "coverLetter": "The full cover letter as a single string."
+          "coverLetter": "The full cover letter as a single string.",
+          "tailoredProfile": { /* optional: full CandidateProfile JSON with the resume recreated */ }
         }
 
         Rules:
@@ -37,35 +67,46 @@ public sealed class TailoringAgent
         - coverLetter: a complete, ready-to-send cover letter of roughly 200 to 300 words, in the
           candidate's voice. Reference the specific role, company, and the strongest matches between
           the candidate's experience and the job.
+        - Use the provided cover letter template, filling in placeholders and paragraphs with
+          content tailored to the job description __COVER_LETTER_TEMPLATE__
         - Never invent experience, employers, or qualifications the profile does not contain.
         - Keep placeholders such as [NAME], [EMPLOYER_1], and [LOCATION_1] exactly as they are.
         """;
 
     private static readonly JsonSerializerOptions SerializerOptions = new(JsonSerializerDefaults.Web);
 
-    private readonly AIAgent _agent;
+    private readonly IChatClient _chatClient;
+    private readonly PiiRedactor _redactor;
+    private readonly IProfileStore _profiles;
     private readonly ILogger<TailoringAgent> _logger;
 
     public TailoringAgent(
         IChatClient chatClient,
         PiiRedactor redactor,
-        CandidateProfile profile,
+        IProfileStore profiles,
         ILoggerFactory loggerFactory)
     {
+        _chatClient = chatClient;
+        _redactor = redactor;
+        _profiles = profiles;
         _logger = loggerFactory.CreateLogger<TailoringAgent>();
-
-        var profileJson = JsonSerializer.Serialize(redactor.Redact(profile), SerializerOptions);
-        var instructions = Instructions.Replace("__PROFILE_JSON__", profileJson, StringComparison.Ordinal);
-
-        _agent = chatClient.AsAIAgent(instructions: instructions, name: "tailoring_agent");
     }
 
     public async Task<TailoringDraft> DraftAsync(string jobDescription, CancellationToken ct)
     {
+        // Build the agent with the current profile at request time so we use the
+        // profile most recently saved via the API / front-end.
+        var profile = await _profiles.GetAsync(ct);
+        var profileJson = JsonSerializer.Serialize(_redactor.Redact(profile), SerializerOptions);
+        var instructions = Instructions.Replace("__PROFILE_JSON__", profileJson, StringComparison.Ordinal);
+        instructions = instructions.Replace("__COVER_LETTER_TEMPLATE__", CoverLetterTemplate, StringComparison.Ordinal);
+
+        var agent = _chatClient.AsAIAgent(instructions: instructions, name: "tailoring_agent");
+
         var userMessage = jobDescription;
         for (var attempt = 0; attempt < MaxAttempts; attempt++)
         {
-            var response = await _agent.RunAsync([new ChatMessage(ChatRole.User, userMessage)], session: null, options: null, ct);
+            var response = await agent.RunAsync(new[] { new ChatMessage(ChatRole.User, userMessage) }, session: null, options: null, ct);
             var text = response.Text?.Trim() ?? string.Empty;
 
             if (text.Length > 0)
@@ -95,6 +136,6 @@ public sealed class TailoringAgent
         (wasEmpty
             ? "Your previous response was empty."
             : "Your previous response was not valid JSON matching the required schema.") +
-        " Reply with a single JSON object containing resumeBullets and coverLetter, and nothing else." +
+        " Reply with a single JSON object containing resumeBullets, coverLetter, and optionally tailoredProfile, and nothing else." +
         " The job description was:\n\n" + jobDescription;
 }
