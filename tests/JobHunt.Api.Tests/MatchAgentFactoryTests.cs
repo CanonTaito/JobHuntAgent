@@ -60,8 +60,8 @@ public sealed class MatchAgentFactoryTests
     private static MatchTools CreateTools(IChatClient chat)
     {
         var profile = new CandidateProfile { Name = "Test", Skills = ["alpha"] };
-        var redactor = new PiiRedactor(profile, new InMemoryPiiMappingStore(), NullLogger<PiiRedactor>.Instance);
+        var redactors = new ProfileRedactorProvider(new FakeProfileStore(profile), NullLoggerFactory.Instance);
 
-        return new MatchTools(redactor, profile, chat);
+        return new MatchTools(redactors, chat);
     }
 }

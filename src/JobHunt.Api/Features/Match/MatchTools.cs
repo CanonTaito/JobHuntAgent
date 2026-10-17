@@ -1,6 +1,5 @@
 using System.Text.Json;
 using JobHunt.Api.Features.Pii;
-using JobHunt.Api.Features.Profile;
 using Microsoft.Extensions.AI;
 
 namespace JobHunt.Api.Features.Match;
@@ -10,17 +9,17 @@ public sealed class MatchTools
     private static readonly JsonSerializerOptions SerializerOptions = new(JsonSerializerDefaults.Web);
 
     private readonly IChatClient _chatClient;
-    private readonly string _profileJson;
+    private readonly ProfileRedactorProvider _redactors;
 
-    public MatchTools(PiiRedactor redactor, CandidateProfile profile, IChatClient chatClient)
+    public MatchTools(ProfileRedactorProvider redactors, IChatClient chatClient)
     {
+        _redactors = redactors;
         _chatClient = chatClient;
-        _profileJson = JsonSerializer.Serialize(redactor.Redact(profile), SerializerOptions);
     }
 
-    public string GetProfile() => _profileJson;
+    public string GetProfile() => BuildProfile();
 
-    public Task<string> GetProfileAsync(CancellationToken ct = default) => Task.FromResult(_profileJson);
+    public Task<string> GetProfileAsync(CancellationToken ct = default) => Task.FromResult(BuildProfile());
 
     public async Task<string> ScoreJobAsync(string jobDescription, CancellationToken ct)
     {
@@ -46,11 +45,14 @@ public sealed class MatchTools
         }
     }
 
+    private string BuildProfile() =>
+        JsonSerializer.Serialize(_redactors.RedactCurrent(), SerializerOptions);
+
     private string BuildPrompt(string jobDescription) => $$"""
         Compare this candidate profile against the job description and score the match.
 
         Candidate profile (JSON):
-        {{_profileJson}}
+        {{BuildProfile()}}
 
         Job description:
         {{jobDescription}}

@@ -7,20 +7,20 @@ namespace JobHunt.Api.Features.Match;
 public sealed class EmbeddingScorer
 {
     private readonly IEmbeddingGenerator<string, Embedding<float>> _generator;
-    private readonly string _profileText;
+    private readonly ProfileRedactorProvider _redactors;
 
     public EmbeddingScorer(
         IEmbeddingGenerator<string, Embedding<float>> generator,
-        PiiRedactor redactor,
-        CandidateProfile profile)
+        ProfileRedactorProvider redactors)
     {
         _generator = generator;
-        _profileText = BuildProfileText(redactor.Redact(profile));
+        _redactors = redactors;
     }
 
     public async Task<int> ScoreAsync(string jobDescription, CancellationToken ct)
     {
-        var embeddings = await _generator.GenerateAsync([_profileText, jobDescription], options: null, ct);
+        var profileText = BuildProfileText(_redactors.RedactCurrent());
+        var embeddings = await _generator.GenerateAsync([profileText, jobDescription], options: null, ct);
         var similarity = CosineSimilarity(embeddings[0].Vector.Span, embeddings[1].Vector.Span);
         return Math.Clamp((int)Math.Round(similarity * 100), 0, 100);
     }

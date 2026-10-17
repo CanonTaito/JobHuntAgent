@@ -98,8 +98,8 @@ app.MapGet("/api/ai/ping", async (IChatClient chat, CancellationToken ct) =>
 
 app.MapGet("/api/profile", (IProfileStore profiles) => Results.Ok(profiles.Current));
 
-app.MapGet("/api/profile/redacted", (IProfileStore profiles, PiiRedactor redactor) =>
-    Results.Ok(redactor.Redact(profiles.Current)));
+app.MapGet("/api/profile/redacted", (ProfileRedactorProvider redactors) =>
+    Results.Ok(redactors.RedactCurrent()));
 
 app.MapPost("/api/scan", async (JdScannerAgent scanner, HttpRequest request, CancellationToken ct) =>
 {

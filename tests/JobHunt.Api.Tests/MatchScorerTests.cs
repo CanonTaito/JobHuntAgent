@@ -13,11 +13,10 @@ public sealed class MatchScorerTests
     public async Task Overall_is_the_mean_of_skills_seniority_fit_and_similarity()
     {
         var profile = new CandidateProfile { Name = "Test", Skills = ["alpha"] };
-        var redactor = new PiiRedactor(profile, new InMemoryPiiMappingStore(), NullLogger<PiiRedactor>.Instance);
+        var redactors = new ProfileRedactorProvider(new FakeProfileStore(profile), NullLoggerFactory.Instance);
         var embeddings = new EmbeddingScorer(
             new FakeEmbeddingGenerator(text => text.Contains("alpha") ? [1f, 0f] : [0.6f, 0.8f]),
-            redactor,
-            profile);
+            redactors);
 
         var scorer = new MatchScorer(
             new StubMatchAgent(new MatchScore { Skills = 90, Seniority = 80, Fit = 70 }),

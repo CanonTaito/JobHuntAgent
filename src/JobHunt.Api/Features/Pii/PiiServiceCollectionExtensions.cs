@@ -13,6 +13,7 @@ public static class PiiServiceCollectionExtensions
             serviceProvider.GetRequiredService<CandidateProfile>(),
             serviceProvider.GetRequiredService<IPiiMappingStore>(),
             serviceProvider.GetRequiredService<ILogger<PiiRedactor>>()));
+        services.AddSingleton<ProfileRedactorProvider>();
 
         return services;
     }

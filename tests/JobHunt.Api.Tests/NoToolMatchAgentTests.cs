@@ -52,8 +52,8 @@ public sealed class NoToolMatchAgentTests
     private static NoToolMatchAgent CreateAgent(ScriptedChatClient chat)
     {
         var profile = new CandidateProfile { Name = "Test", Skills = ["alpha"] };
-        var redactor = new PiiRedactor(profile, new InMemoryPiiMappingStore(), NullLogger<PiiRedactor>.Instance);
-        var tools = new MatchTools(redactor, profile, chat);
+        var redactors = new ProfileRedactorProvider(new FakeProfileStore(profile), NullLoggerFactory.Instance);
+        var tools = new MatchTools(redactors, chat);
 
         return new NoToolMatchAgent(chat, tools, NullLoggerFactory.Instance);
     }

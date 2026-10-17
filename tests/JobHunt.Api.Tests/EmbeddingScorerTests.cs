@@ -42,7 +42,7 @@ public sealed class EmbeddingScorerTests
 
     private static EmbeddingScorer Build(Func<string, float[]> vector)
     {
-        var redactor = new PiiRedactor(Profile, new InMemoryPiiMappingStore(), NullLogger<PiiRedactor>.Instance);
-        return new EmbeddingScorer(new FakeEmbeddingGenerator(vector), redactor, Profile);
+        var redactors = new ProfileRedactorProvider(new FakeProfileStore(Profile), NullLoggerFactory.Instance);
+        return new EmbeddingScorer(new FakeEmbeddingGenerator(vector), redactors);
     }
 }
