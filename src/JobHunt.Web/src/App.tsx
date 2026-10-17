@@ -2,8 +2,9 @@ import { useState } from 'react'
 import ScanPage from './ScanPage'
 import MatchPage from './MatchPage'
 import TrackerPage from './TrackerPage'
+import ResumePage from './ResumePage'
 
-type Tab = 'tracker' | 'scan' | 'match'
+type Tab = 'tracker' | 'scan' | 'match' | 'resume'
 
 function App() {
   const [tab, setTab] = useState<Tab>('tracker')
@@ -37,11 +38,20 @@ function App() {
           >
             Score a match
           </button>
+          <button
+            type="button"
+            className={tab === 'resume' ? 'tab tab-active' : 'tab'}
+            aria-current={tab === 'resume' ? 'page' : undefined}
+            onClick={() => setTab('resume')}
+          >
+            Resume
+          </button>
         </nav>
       </header>
       {tab === 'tracker' && <TrackerPage />}
       {tab === 'scan' && <ScanPage />}
       {tab === 'match' && <MatchPage />}
+      {tab === 'resume' && <ResumePage />}
     </div>
   )
 }
