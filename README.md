@@ -229,10 +229,10 @@ The SEEK connector calls SEEK's (undocumented) search endpoint, maps each ad int
 | Setting | Default | Notes |
 |---------|---------|-------|
 | `Jobs:Source` | `seek` | `seek` or `in-memory` |
-| `Jobs:Seek:Endpoint` | `https://www.seek.com.au/api/chalice-search/v4/search` | the search JSON endpoint |
+| `Jobs:Seek:Endpoint` | `https://www.seek.com.au/api/jobsearch/v5/search` | the search JSON endpoint |
 | `Jobs:Seek:SiteKey` | `AU-Main` | SEEK site |
 | `Jobs:Seek:SourceSystem` | `houston` | SEEK's source-system parameter |
-| `Jobs:Seek:PageSize` | `30` | results per page |
+| `Jobs:Seek:PageSize` | `20` | fallback page size when SEEK's `solMetadata.pageSize` is absent |
 | `Jobs:Seek:MaxPages` | `2` | pages fetched per search |
 | `Jobs:Seek:MinRequestIntervalMs` | `1000` | throttle between upstream requests |
 | `Jobs:Seek:CacheMinutes` | `30` | in-memory response cache TTL |

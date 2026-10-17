@@ -18,7 +18,7 @@ public static class SeekListingMapper
             return null;
         }
 
-        var (min, max) = ParseSalary(ad.Salary);
+        var (min, max) = ParseSalary(ad.SalaryLabel);
 
         return new JobListing
         {
@@ -26,16 +26,43 @@ public static class SeekListingMapper
             Source = SeekJobSource.SourceName,
             Title = title,
             Company = FirstNonEmpty(ad.CompanyName, ad.Advertiser?.Description) ?? "Unknown",
-            Location = Blank(ad.Location),
-            WorkModel = MapWorkModel(ad.WorkArrangement),
-            Description = PickDescription(ad),
+            Location = Blank(ad.Locations?.FirstOrDefault()?.Label),
+            WorkModel = MapWorkModel(ResolveWorkArrangement(ad)),
+            Description = BuildDescription(ad),
             SalaryMin = min,
             SalaryMax = max,
             SalaryCurrency = min is not null || max is not null ? "AUD" : null,
-            SalaryText = Blank(ad.Salary),
+            SalaryText = Blank(ad.SalaryLabel),
             Url = $"https://www.seek.com.au/job/{id}",
             PostedAt = ParseDate(ad.ListingDate),
         };
+    }
+
+    private static string? ResolveWorkArrangement(SeekAd ad) =>
+        FirstNonEmpty(ad.WorkArrangements?.DisplayText, ad.WorkArrangements?.Data?.FirstOrDefault()?.Label?.Text);
+
+    private static string BuildDescription(SeekAd ad)
+    {
+        var parts = new List<string>();
+        var teaser = Blank(ad.Teaser);
+        if (teaser is not null)
+        {
+            parts.Add(teaser);
+        }
+
+        if (ad.BulletPoints is { Count: > 0 } bullets)
+        {
+            foreach (var bullet in bullets)
+            {
+                var text = Blank(bullet);
+                if (text is not null)
+                {
+                    parts.Add($"- {text}");
+                }
+            }
+        }
+
+        return string.Join("\n", parts);
     }
 
     public static (int? Min, int? Max) ParseSalary(string? text)
@@ -99,15 +126,6 @@ public static class SeekListingMapper
         JsonValueKind.String => id.Value.GetString() ?? string.Empty,
         _ => string.Empty,
     };
-
-    private static string PickDescription(SeekAd ad) =>
-        Longest(ad.Content, ad.JobShortDescription, ad.Teaser) ?? string.Empty;
-
-    private static string? Longest(params string?[] values) =>
-        values
-            .Where(value => !string.IsNullOrWhiteSpace(value))
-            .OrderByDescending(value => value!.Length)
-            .FirstOrDefault();
 
     private static string? FirstNonEmpty(params string?[] values) =>
         values.FirstOrDefault(value => !string.IsNullOrWhiteSpace(value))?.Trim();

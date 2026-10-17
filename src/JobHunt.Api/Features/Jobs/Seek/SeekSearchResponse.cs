@@ -10,6 +10,15 @@ public sealed record SeekSearchResponse
 
     [JsonPropertyName("totalCount")]
     public int? TotalCount { get; init; }
+
+    [JsonPropertyName("solMetadata")]
+    public SeekSolMetadata? SolMetadata { get; init; }
+}
+
+public sealed record SeekSolMetadata
+{
+    [JsonPropertyName("pageSize")]
+    public int? PageSize { get; init; }
 }
 
 public sealed record SeekAd
@@ -26,14 +35,14 @@ public sealed record SeekAd
     [JsonPropertyName("advertiser")]
     public SeekAdvertiser? Advertiser { get; init; }
 
-    [JsonPropertyName("location")]
-    public string? Location { get; init; }
+    [JsonPropertyName("locations")]
+    public IReadOnlyList<SeekLocation>? Locations { get; init; }
 
-    [JsonPropertyName("workArrangement")]
-    public string? WorkArrangement { get; init; }
+    [JsonPropertyName("workArrangements")]
+    public SeekWorkArrangements? WorkArrangements { get; init; }
 
-    [JsonPropertyName("salary")]
-    public string? Salary { get; init; }
+    [JsonPropertyName("salaryLabel")]
+    public string? SalaryLabel { get; init; }
 
     [JsonPropertyName("listingDate")]
     public string? ListingDate { get; init; }
@@ -41,15 +50,48 @@ public sealed record SeekAd
     [JsonPropertyName("teaser")]
     public string? Teaser { get; init; }
 
-    [JsonPropertyName("content")]
-    public string? Content { get; init; }
+    [JsonPropertyName("bulletPoints")]
+    public IReadOnlyList<string>? BulletPoints { get; init; }
 
-    [JsonPropertyName("jobShortDescription")]
-    public string? JobShortDescription { get; init; }
+    [JsonPropertyName("workTypes")]
+    public IReadOnlyList<string>? WorkTypes { get; init; }
+
+    [JsonPropertyName("roleId")]
+    public string? RoleId { get; init; }
 }
 
 public sealed record SeekAdvertiser
 {
     [JsonPropertyName("description")]
     public string? Description { get; init; }
+}
+
+public sealed record SeekLocation
+{
+    [JsonPropertyName("label")]
+    public string? Label { get; init; }
+
+    [JsonPropertyName("countryCode")]
+    public string? CountryCode { get; init; }
+}
+
+public sealed record SeekWorkArrangements
+{
+    [JsonPropertyName("displayText")]
+    public string? DisplayText { get; init; }
+
+    [JsonPropertyName("data")]
+    public IReadOnlyList<SeekWorkArrangement>? Data { get; init; }
+}
+
+public sealed record SeekWorkArrangement
+{
+    [JsonPropertyName("label")]
+    public SeekLabel? Label { get; init; }
+}
+
+public sealed record SeekLabel
+{
+    [JsonPropertyName("text")]
+    public string? Text { get; init; }
 }

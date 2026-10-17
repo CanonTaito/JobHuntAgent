@@ -41,7 +41,6 @@ public sealed class SeekJobSource : IJobSource
             return cached;
         }
 
-        var pageSize = Math.Max(1, _options.PageSize);
         var pages = Math.Clamp(_options.MaxPages, 1, 20);
         var limit = query.MaxResults > 0 ? query.MaxResults : int.MaxValue;
         var listings = new List<JobListing>();
@@ -58,17 +57,19 @@ public sealed class SeekJobSource : IJobSource
             foreach (var ad in ads)
             {
                 var listing = SeekListingMapper.Map(ad);
-                if (listing is not null)
+                if (listing is null || !MatchesWorkModels(query, listing))
                 {
-                    listings.Add(listing);
+                    continue;
                 }
 
+                listings.Add(listing);
                 if (listings.Count >= limit)
                 {
                     break;
                 }
             }
 
+            var pageSize = payload!.SolMetadata?.PageSize ?? Math.Max(1, _options.PageSize);
             if (listings.Count >= limit || ads.Count < pageSize)
             {
                 break;
@@ -117,8 +118,8 @@ public sealed class SeekJobSource : IJobSource
             $"siteKey={Uri.EscapeDataString(_options.SiteKey)}",
             $"sourcesystem={Uri.EscapeDataString(_options.SourceSystem)}",
             $"page={page}",
-            $"pagesize={_options.PageSize}",
             "locale=en-AU",
+            "include=seodata",
         };
 
         if (query.Keywords.Count > 0)
@@ -128,7 +129,7 @@ public sealed class SeekJobSource : IJobSource
 
         if (query.Locations.Count > 0)
         {
-            parameters.Add($"where={Uri.EscapeDataString(string.Join(' ', query.Locations))}");
+            parameters.Add($"where={Uri.EscapeDataString(query.Locations[0])}");
         }
 
         var salaryRange = BuildSalaryRange(query);
@@ -137,14 +138,19 @@ public sealed class SeekJobSource : IJobSource
             parameters.Add($"salaryrange={salaryRange}");
         }
 
-        var arrangement = BuildArrangement(query);
-        if (arrangement is not null)
-        {
-            parameters.Add($"workarrangement={arrangement}");
-        }
-
         var separator = _options.Endpoint.Contains('?') ? '&' : '?';
         return $"{_options.Endpoint}{separator}{string.Join('&', parameters)}";
+    }
+
+    private static bool MatchesWorkModels(JobSearchQuery query, JobListing listing)
+    {
+        if (query.WorkModels.Count == 0)
+        {
+            return true;
+        }
+
+        return !string.IsNullOrWhiteSpace(listing.WorkModel) &&
+            query.WorkModels.Any(model => string.Equals(model, listing.WorkModel, StringComparison.OrdinalIgnoreCase));
     }
 
     private static string? BuildSalaryRange(JobSearchQuery query) => (query.SalaryMin, query.SalaryMax) switch
@@ -154,20 +160,6 @@ public sealed class SeekJobSource : IJobSource
         (null, not null) => $"-{query.SalaryMax}",
         _ => null,
     };
-
-    private static string? BuildArrangement(JobSearchQuery query)
-    {
-        foreach (var model in query.WorkModels)
-        {
-            var mapped = SeekListingMapper.MapWorkModel(model);
-            if (mapped is not null)
-            {
-                return mapped.ToLowerInvariant().Replace("-", string.Empty);
-            }
-        }
-
-        return null;
-    }
 
     private string BuildCacheKey(JobSearchQuery query)
     {
@@ -182,7 +174,6 @@ public sealed class SeekJobSource : IJobSource
             Join(query.WorkModels),
             query.SalaryMin?.ToString() ?? "-",
             query.SalaryMax?.ToString() ?? "-",
-            _options.PageSize,
             Math.Clamp(_options.MaxPages, 1, 20));
     }
 }

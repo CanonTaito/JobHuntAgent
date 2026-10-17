@@ -10,7 +10,7 @@ public sealed class JobsOptions
 
     public sealed class SeekOptions
     {
-        public string Endpoint { get; set; } = "https://www.seek.com.au/api/chalice-search/v4/search";
+        public string Endpoint { get; set; } = "https://www.seek.com.au/api/jobsearch/v5/search";
 
         public string SiteKey { get; set; } = "AU-Main";
 
@@ -19,7 +19,7 @@ public sealed class JobsOptions
         public string UserAgent { get; set; } =
             "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/125.0 Safari/537.36";
 
-        public int PageSize { get; set; } = 30;
+        public int PageSize { get; set; } = 20;
 
         public int MaxPages { get; set; } = 2;
 
