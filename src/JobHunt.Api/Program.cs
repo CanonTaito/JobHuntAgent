@@ -122,6 +122,52 @@ app.MapPost("/api/match", async (MatchScorer scorer, HttpRequest request, Cancel
     return Results.Ok(await scorer.ScoreAsync(jd, ct));
 });
 
+app.MapPost("/api/resume", async (HttpRequest request, ResumeTextExtractor extractor, ResumeParserAgent parser, CancellationToken ct) =>
+{
+    if (!request.HasFormContentType)
+    {
+        return Results.BadRequest(new { error = "Request must be multipart/form-data with a resume file and a candidate name." });
+    }
+
+    var form = await request.ReadFormAsync(ct);
+
+    var name = form["name"].ToString().Trim();
+    if (string.IsNullOrWhiteSpace(name))
+    {
+        return Results.BadRequest(new { error = "A candidate name is required." });
+    }
+
+    var file = form.Files["file"] ?? form.Files.FirstOrDefault();
+    if (file is null || file.Length == 0)
+    {
+        return Results.BadRequest(new { error = "A resume file is required." });
+    }
+
+    if (file.Length > 10 * 1024 * 1024)
+    {
+        return Results.BadRequest(new { error = "The resume file must be 10 MB or smaller." });
+    }
+
+    try
+    {
+        await using var stream = file.OpenReadStream();
+        var text = await extractor.ExtractAsync(stream, file.FileName, ct);
+        return Results.Ok(await parser.ParseAsync(text, name, ct));
+    }
+    catch (NotSupportedException e)
+    {
+        return Results.BadRequest(new { error = e.Message });
+    }
+    catch (InvalidDataException e)
+    {
+        return Results.BadRequest(new { error = e.Message });
+    }
+    catch (ResumeParseFormatException e)
+    {
+        return Results.Problem(e.Message, statusCode: StatusCodes.Status502BadGateway);
+    }
+}).DisableAntiforgery();
+
 app.MapPost("/api/discover", async (JobDiscoveryPipeline pipeline, int? max, CancellationToken ct) =>
     Results.Ok(await pipeline.RunAsync(max ?? 5, ct)));
 
