@@ -1,6 +1,6 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import type { ChangeEvent, FormEvent } from 'react'
-import { uploadResume } from './resume'
+import { getCurrentProfile, uploadResume } from './resume'
 import type { CandidateProfile } from './resume'
 
 function ResumePage() {
@@ -9,11 +9,41 @@ function ResumePage() {
   const [profile, setProfile] = useState<CandidateProfile | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [loading, setLoading] = useState(false)
+  const [loadingProfile, setLoadingProfile] = useState(true)
+  const [showUpload, setShowUpload] = useState(false)
+
+  useEffect(() => {
+    const controller = new AbortController()
+
+    async function load() {
+      setLoadingProfile(true)
+      setError(null)
+      try {
+        setProfile(await getCurrentProfile(controller.signal))
+        setShowUpload(false)
+      } catch (e) {
+        if (controller.signal.aborted) {
+          return
+        }
+        setProfile(null)
+        setShowUpload(true)
+      } finally {
+        if (!controller.signal.aborted) {
+          setLoadingProfile(false)
+        }
+      }
+    }
+
+    load()
+
+    return () => {
+      controller.abort()
+    }
+  }, [])
 
   function handleFileChange(event: ChangeEvent<HTMLInputElement>) {
     const f = event.target.files?.[0] ?? null
     setFile(f)
-    setProfile(null)
     setError(null)
   }
 
@@ -25,9 +55,11 @@ function ResumePage() {
 
     setLoading(true)
     setError(null)
-    setProfile(null)
     try {
-      setProfile(await uploadResume(file, name.trim()))
+      const uploaded = await uploadResume(file, name.trim())
+      setProfile(uploaded)
+      setShowUpload(false)
+      setFile(null)
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Upload failed.')
     } finally {
@@ -39,39 +71,63 @@ function ResumePage() {
     <main className="scan">
       <p className="tagline">Upload your resume and the agent will parse it into a structured profile.</p>
 
-      <form className="scan-form" onSubmit={handleSubmit}>
-        <label className="scan-label" htmlFor="resume-name">
-          Your name
-        </label>
-        <input
-          id="resume-name"
-          className="scan-input"
-          type="text"
-          value={name}
-          onChange={(e) => setName(e.target.value)}
-          placeholder="Canon Taito"
-          spellCheck={false}
-        />
+      {loadingProfile && (
+        <div className="scan-status" role="status" aria-live="polite">
+          <p>Loading your saved profile...</p>
+        </div>
+      )}
 
-        <label className="scan-label" htmlFor="resume-file">
-          Resume file (.txt, .md, .markdown, .pdf, .docx)
-        </label>
-        <input
-          id="resume-file"
-          className="scan-input"
-          type="file"
-          accept=".txt,.md,.markdown,.pdf,.docx,text/plain,text/markdown,application/pdf,application/vnd.openxmlformats-officedocument.wordprocessingml.document"
-          onChange={handleFileChange}
-        />
+      {profile && !loadingProfile && (
+        <section className="result">
+          <div className="result-header">
+            <h2>Current profile</h2>
+            <button
+              type="button"
+              className="tab"
+              onClick={() => setShowUpload((s) => !s)}
+            >
+              {showUpload ? 'Hide upload form' : 'Replace profile'}
+            </button>
+          </div>
+          <ProfileResult profile={profile} />
+        </section>
+      )}
 
-        <button
-          className="scan-button"
-          type="submit"
-          disabled={loading || !name.trim() || !file}
-        >
-          {loading ? 'Parsing…' : 'Upload resume'}
-        </button>
-      </form>
+      {!loadingProfile && (!profile || showUpload) && (
+        <form className="scan-form" onSubmit={handleSubmit}>
+          <label className="scan-label" htmlFor="resume-name">
+            Your name
+          </label>
+          <input
+            id="resume-name"
+            className="scan-input"
+            type="text"
+            value={name}
+            onChange={(e) => setName(e.target.value)}
+            placeholder="Canon Taito"
+            spellCheck={false}
+          />
+
+          <label className="scan-label" htmlFor="resume-file">
+            Resume file (.txt, .md, .markdown, .pdf, .docx)
+          </label>
+          <input
+            id="resume-file"
+            className="scan-input"
+            type="file"
+            accept=".txt,.md,.markdown,.pdf,.docx,text/plain,text/markdown,application/pdf,application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+            onChange={handleFileChange}
+          />
+
+          <button
+            className="scan-button"
+            type="submit"
+            disabled={loading || !name.trim() || !file}
+          >
+            {loading ? 'Parsing…' : 'Upload resume'}
+          </button>
+        </form>
+      )}
 
       <div className="scan-status" role="status" aria-live="polite">
         {loading && (
@@ -79,8 +135,6 @@ function ResumePage() {
         )}
         {error && <p className="scan-error">{error}</p>}
       </div>
-
-      {profile && <ProfileResult profile={profile} />}
     </main>
   )
 }

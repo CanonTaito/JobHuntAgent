@@ -59,6 +59,15 @@ export async function uploadResume(file: File, name: string, signal?: AbortSigna
   return (await response.json()) as CandidateProfile
 }
 
+export async function getCurrentProfile(signal?: AbortSignal): Promise<CandidateProfile> {
+  const response = await fetch(`${API_BASE}/api/profile`, { signal })
+  if (!response.ok) {
+    throw new Error(await readError(response))
+  }
+
+  return (await response.json()) as CandidateProfile
+}
+
 async function readError(response: Response): Promise<string> {
   const fallback = `Upload failed (HTTP ${response.status}).`
   try {
