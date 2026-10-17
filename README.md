@@ -221,14 +221,14 @@ Discovery runs through the `IJobSource` abstraction, so the agent searches a plu
 
 | Source | Value | Notes |
 |--------|-------|-------|
-| In-memory demo | `in-memory` (default) | five fixed fictional ads — used for demos and tests, no network |
-| SEEK | `seek` | live listings from SEEK's search JSON (`seek.com.au`) |
+| SEEK | `seek` (default) | live listings from SEEK's search JSON (`seek.com.au`) |
+| In-memory demo | `in-memory` | five fixed fictional ads - used for demos and tests, no network |
 
 The SEEK connector calls SEEK's (undocumented) search endpoint, maps each ad into a `JobListing` (parsing displayed salary text, work arrangement and advertiser), and is deliberately polite: requests are **throttled** to at most one every `Jobs:Seek:MinRequestIntervalMs` and responses are **cached** in memory for `Jobs:Seek:CacheMinutes`, keyed by the query. If SEEK blocks or is unreachable the search simply returns nothing and is logged — discovery never crashes.
 
 | Setting | Default | Notes |
 |---------|---------|-------|
-| `Jobs:Source` | `in-memory` | `in-memory` or `seek` |
+| `Jobs:Source` | `seek` | `seek` or `in-memory` |
 | `Jobs:Seek:Endpoint` | `https://www.seek.com.au/api/chalice-search/v4/search` | the search JSON endpoint |
 | `Jobs:Seek:SiteKey` | `AU-Main` | SEEK site |
 | `Jobs:Seek:SourceSystem` | `houston` | SEEK's source-system parameter |
@@ -239,7 +239,7 @@ The SEEK connector calls SEEK's (undocumented) search endpoint, maps each ad int
 | `Jobs:Seek:TimeoutSeconds` | `15` | per-request timeout |
 
 ```powershell
-$env:Jobs__Source = "seek"; dotnet run --project src/JobHunt.Api
+$env:Jobs__Source = "in-memory"; dotnet run --project src/JobHunt.Api
 ```
 
 SEEK exposes no public API and uses anti-bot protection, so keep the throttle and cache on and expect occasional empty results.
@@ -419,4 +419,4 @@ At a high level: a Minimal API (ASP.NET Core) plus a small React/Vite frontend. 
 1. cp src/JobHunt.Api/profile.sample.json src/JobHunt.Api/profile.json (edit to your needs) and ollama pull gemma3:latest qwen2.5:3b nomic-embed-text:latest.
 2. dotnet run --project src/JobHunt.Api (http://localhost:5051). 
 pm --prefix src/JobHunt.Web run dev (http://localhost:5173).
-3. Scan a JD on the Scan page, then Match on the Match page, or Discover against the in-memory seed listings. Use the Tracker to move through Scored ? Shortlisted ? Tailored ? AwaitingApproval ? Applied, record outcomes, and generate follow-ups.
+3. Scan a JD on the Scan page, then Match on the Match page, or Discover jobs from SEEK (switch `Jobs:Source` to `in-memory` for the offline seeds). Use the Tracker to move through Scored ? Shortlisted ? Tailored ? AwaitingApproval ? Applied, record outcomes, and generate follow-ups.

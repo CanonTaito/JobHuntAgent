@@ -4,7 +4,7 @@ public sealed class JobsOptions
 {
     public const string SectionName = "Jobs";
 
-    public string Source { get; set; } = "in-memory";
+    public string Source { get; set; } = "seek";
 
     public SeekOptions Seek { get; set; } = new();
 
