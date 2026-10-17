@@ -10,6 +10,8 @@ public static class ResumeServiceCollectionExtensions
         services.AddSingleton<IResumeTextExtractor>(sp => sp.GetRequiredService<PlainTextResumeExtractor>());
         services.AddSingleton<PdfResumeTextExtractor>();
         services.AddSingleton<IResumeTextExtractor>(sp => sp.GetRequiredService<PdfResumeTextExtractor>());
+        services.AddSingleton<DocxResumeTextExtractor>();
+        services.AddSingleton<IResumeTextExtractor>(sp => sp.GetRequiredService<DocxResumeTextExtractor>());
         services.AddSingleton<ResumeTextExtractor>();
 
         return services;
