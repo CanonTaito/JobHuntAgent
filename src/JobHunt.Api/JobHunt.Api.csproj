@@ -22,6 +22,7 @@
     <PackageReference Include="OpenTelemetry.Instrumentation.EntityFrameworkCore" Version="1.19.1-beta.1" />
     <PackageReference Include="OpenTelemetry.Instrumentation.Http" Version="1.19.0" />
     <PackageReference Include="OpenTelemetry.Instrumentation.Runtime" Version="1.19.0" />
+    <PackageReference Include="PdfPig" Version="0.1.16" />
   </ItemGroup>
 
 </Project>
