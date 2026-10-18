@@ -144,4 +144,30 @@ public sealed class AiErrorClassifierTests
 
         Assert.False(AiErrorClassifier.ShouldAdvance(exception));
     }
+
+    [Theory]
+    [InlineData(408, 503)]
+    [InlineData(429, 503)]
+    [InlineData(500, 503)]
+    [InlineData(503, 503)]
+    [InlineData(400, 502)]
+    [InlineData(401, 502)]
+    [InlineData(404, 502)]
+    public void Maps_upstream_http_failures_to_a_gateway_status(int status, int expected) =>
+        Assert.Equal(expected, AiErrorClassifier.ProviderFailureStatusCode(HttpError(status)));
+
+    [Fact]
+    public void Maps_transport_failures_to_service_unavailable()
+    {
+        Assert.Equal(503, AiErrorClassifier.ProviderFailureStatusCode(new HttpRequestException("refused")));
+        Assert.Equal(503, AiErrorClassifier.ProviderFailureStatusCode(new TimeoutException()));
+        Assert.Equal(
+            503,
+            AiErrorClassifier.ProviderFailureStatusCode(
+                new ClientResultException(new FakePipelineResponse(0), new HttpRequestException("refused"))));
+    }
+
+    [Fact]
+    public void Returns_no_status_for_failures_that_are_not_provider_failures() =>
+        Assert.Null(AiErrorClassifier.ProviderFailureStatusCode(new InvalidOperationException("boom")));
 }

@@ -1,4 +1,5 @@
 using JobHunt.Api.Ai;
+using JobHunt.Api.Ai.Retry;
 using JobHunt.Api.Features.Applications;
 using JobHunt.Api.Features.Approvals;
 using JobHunt.Api.Features.Discovery;
@@ -179,8 +180,30 @@ app.MapGet("/api/salary/validate", async (SalaryInferenceValidator validator, in
 
 app.MapPost("/api/applications/{id:int}/tailor", async (int id, TailoringService tailoring, CancellationToken ct) =>
 {
-    var draft = await tailoring.TailorAsync(id, ct);
-    return draft is null ? Results.NotFound() : Results.Ok(draft);
+    try
+    {
+        var draft = await tailoring.TailorAsync(id, ct);
+        return draft is null ? Results.NotFound() : Results.Ok(draft);
+    }
+    catch (TailoringFormatException exception)
+    {
+        return Results.Json(new { error = exception.Message }, statusCode: StatusCodes.Status502BadGateway);
+    }
+    catch (Exception exception)
+    {
+        var status = AiErrorClassifier.ProviderFailureStatusCode(exception);
+        if (status is null)
+        {
+            throw;
+        }
+
+        return Results.Json(
+            new
+            {
+                error = "The AI provider could not complete the tailoring request. Check the provider status and API keys, or add a fallback with AI:FallbackProviders, then try again.",
+            },
+            statusCode: status.Value);
+    }
 });
 
 app.MapGet("/api/applications/ranking-insights", async (OutcomeInsightsService insights, CancellationToken ct) =>

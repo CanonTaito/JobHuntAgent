@@ -63,6 +63,16 @@ public static class AiErrorClassifier
     private static bool IsRetryableStatus(int status) =>
         status is 408 or 429 || status is >= 500 and <= 599;
 
+    public static int? ProviderFailureStatusCode(Exception exception) =>
+        exception switch
+        {
+            ClientResultException { Status: > 0 } client => IsRetryableStatus(client.Status) ? 503 : 502,
+            ClientResultException { InnerException: { } transportFailure } => ProviderFailureStatusCode(transportFailure),
+            HttpRequestException => 503,
+            TimeoutException => 503,
+            _ => null,
+        };
+
     private static TimeSpan? ReadRetryAfter(PipelineResponse? response)
     {
         if (response is null || !response.Headers.TryGetValue("Retry-After", out var value))
