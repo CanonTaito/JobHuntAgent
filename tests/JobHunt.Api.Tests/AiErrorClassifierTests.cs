@@ -100,9 +100,17 @@ public sealed class AiErrorClassifierTests
     public void Advances_past_authentication_failures(int status) =>
         Assert.True(AiErrorClassifier.ShouldAdvance(HttpError(status)));
 
+    [Fact]
+    public void Advances_past_a_missing_model_without_retrying_the_same_provider()
+    {
+        var exception = HttpError(404);
+
+        Assert.False(AiErrorClassifier.IsRetryable(exception, out _));
+        Assert.True(AiErrorClassifier.ShouldAdvance(exception));
+    }
+
     [Theory]
     [InlineData(400)]
-    [InlineData(404)]
     [InlineData(422)]
     public void Does_not_advance_past_permanent_failures(int status) =>
         Assert.False(AiErrorClassifier.ShouldAdvance(HttpError(status)));

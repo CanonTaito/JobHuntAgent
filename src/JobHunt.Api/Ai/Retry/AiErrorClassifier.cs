@@ -10,7 +10,8 @@ public static class AiErrorClassifier
     {
         Transient = 0,
         Authentication = 1,
-        Permanent = 2,
+        ModelMissing = 2,
+        Permanent = 3,
     }
 
     public static bool IsRetryable(Exception exception, out TimeSpan? retryAfter) =>
@@ -58,7 +59,9 @@ public static class AiErrorClassifier
             ? FailureKind.Transient
             : status is 401 or 403
                 ? FailureKind.Authentication
-                : FailureKind.Permanent;
+                : status is 404
+                    ? FailureKind.ModelMissing
+                    : FailureKind.Permanent;
 
     private static bool IsRetryableStatus(int status) =>
         status is 408 or 429 || status is >= 500 and <= 599;
