@@ -317,6 +317,69 @@ function JobDetail({ application }: { application: ApplicationView }) {
         </div>
       )}
 
+      {application.tailoredProfile && (
+        <div className="job-detail-section">
+          <h4>Tailored resume</h4>
+          {application.tailoredProfile.headline && <h5>{application.tailoredProfile.headline}</h5>}
+          {application.tailoredProfile.summary && <p>{application.tailoredProfile.summary}</p>}
+
+          {application.tailoredProfile.skills?.length > 0 && (
+            <>
+              <h5>Skills</h5>
+              <ul className="result-list">
+                {application.tailoredProfile.skills.map((s) => (
+                  <li key={s}>{s}</li>
+                ))}
+              </ul>
+            </>
+          )}
+
+          {application.tailoredProfile.experience?.length > 0 && (
+            <>
+              <h5>Experience</h5>
+              <ul className="result-list">
+                {application.tailoredProfile.experience.map((e, idx) => (
+                  <li key={idx}>
+                    <strong>{e.title ?? ''}</strong>
+                    {e.company ? ` — ${e.company}` : ''}
+                    {e.period ? ` (${e.period})` : ''}
+                    {e.highlights?.length > 0 && (
+                      <ul>
+                        {e.highlights.map((h, i) => (
+                          <li key={i}>{h}</li>
+                        ))}
+                      </ul>
+                    )}
+                  </li>
+                ))}
+              </ul>
+            </>
+          )}
+
+          {application.tailoredProfile.education?.length > 0 && (
+            <>
+              <h5>Education</h5>
+              <ul className="result-list">
+                {application.tailoredProfile.education.map((ed, i) => (
+                  <li key={i}>{ed.qualification ?? ''}{ed.institution ? ` — ${ed.institution}` : ''}</li>
+                ))}
+              </ul>
+            </>
+          )}
+
+          {application.tailoredProfile.highlights?.length > 0 && (
+            <>
+              <h5>Highlights</h5>
+              <ul className="result-list">
+                {application.tailoredProfile.highlights.map((h) => (
+                  <li key={h}>{h}</li>
+                ))}
+              </ul>
+            </>
+          )}
+        </div>
+      )}
+
       {application.url && (
         <p className="job-detail-section">
           <a href={application.url} target="_blank" rel="noreferrer">

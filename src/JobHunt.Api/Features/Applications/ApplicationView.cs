@@ -50,6 +50,8 @@ public sealed record ApplicationView
 
     public string? CoverLetter { get; init; }
 
+    public string? TailoredProfileJson { get; init; }
+
     public DateTimeOffset? TailoredAt { get; init; }
 
     public string? FollowUpSubject { get; init; }
@@ -91,6 +93,7 @@ public sealed record ApplicationView
         MatchSummary = application.MatchSummary,
         TailoredBullets = SplitBullets(application.TailoredBullets),
         CoverLetter = application.CoverLetter,
+        TailoredProfileJson = application.TailoredProfileJson,
         TailoredAt = application.TailoredAt,
         FollowUpSubject = application.FollowUpSubject,
         FollowUpBody = application.FollowUpBody,

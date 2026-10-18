@@ -1,3 +1,5 @@
+import type { CandidateProfile } from './resume'
+
 export type ApplicationView = {
   id: number
   source: string
@@ -22,6 +24,8 @@ export type ApplicationView = {
   tailoredBullets: string[]
   coverLetter: string | null
   tailoredAt: string | null
+  tailoredProfileJson?: string
+  tailoredProfile?: CandidateProfile | null
   postedAt: string | null
   discoveredAt: string
   updatedAt: string
@@ -78,7 +82,23 @@ export async function listApplications(status?: string): Promise<ApplicationView
     throw new Error(await readError(response, 'Could not load applications'))
   }
 
-  return (await response.json()) as ApplicationView[]
+  const apps = (await response.json()) as ApplicationView[]
+  // Safely parse any TailoredProfileJson returned from the server into a
+  // CandidateProfile object for easier consumption by the UI.
+  for (const app of apps) {
+    if (app.tailoredProfileJson) {
+      try {
+        app.tailoredProfile = JSON.parse(app.tailoredProfileJson) as CandidateProfile
+      } catch (e) {
+        // ignore parse errors and leave tailoredProfile undefined
+        // eslint-disable-next-line no-console
+        console.warn('Failed to parse tailoredProfileJson for application', app.id, e)
+        app.tailoredProfile = null
+      }
+    }
+  }
+
+  return apps
 }
 
 export async function discoverJobs(max = 5): Promise<DiscoveryReport> {
