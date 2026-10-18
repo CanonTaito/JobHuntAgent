@@ -20,7 +20,8 @@ public sealed class AiRetryPolicy
     public async Task<T> ExecuteAsync<T>(
         string operation,
         Func<CancellationToken, Task<T>> action,
-        CancellationToken cancellationToken)
+        CancellationToken cancellationToken,
+        string? target = null)
     {
         var attempt = 1;
 
@@ -40,8 +41,9 @@ public sealed class AiRetryPolicy
 
                 _logger.LogWarning(
                     exception,
-                    "AI call '{Operation}' attempt {Attempt}/{MaxAttempts} failed; retrying in {DelayMs} ms.",
+                    "AI {Operation} call{Target} attempt {Attempt}/{MaxAttempts} failed; retrying in {DelayMs} ms.",
                     operation,
+                    target is null ? string.Empty : $" for {target}",
                     attempt,
                     MaxAttempts,
                     (int)delay.TotalMilliseconds);

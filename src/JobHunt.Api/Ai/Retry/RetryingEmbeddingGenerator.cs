@@ -6,11 +6,13 @@ public sealed class RetryingEmbeddingGenerator : IEmbeddingGenerator<string, Emb
 {
     private readonly IEmbeddingGenerator<string, Embedding<float>> _innerGenerator;
     private readonly AiRetryPolicy _policy;
+    private readonly string? _target;
 
-    public RetryingEmbeddingGenerator(IEmbeddingGenerator<string, Embedding<float>> innerGenerator, AiRetryPolicy policy)
+    public RetryingEmbeddingGenerator(IEmbeddingGenerator<string, Embedding<float>> innerGenerator, AiRetryPolicy policy, string? target = null)
     {
         _innerGenerator = innerGenerator;
         _policy = policy;
+        _target = target;
     }
 
     public Task<GeneratedEmbeddings<Embedding<float>>> GenerateAsync(
@@ -23,7 +25,8 @@ public sealed class RetryingEmbeddingGenerator : IEmbeddingGenerator<string, Emb
         return _policy.ExecuteAsync(
             "embeddings",
             token => _innerGenerator.GenerateAsync(materialized, options, token),
-            cancellationToken);
+            cancellationToken,
+            _target);
     }
 
     public object? GetService(Type serviceType, object? serviceKey = null) =>

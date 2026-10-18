@@ -27,7 +27,8 @@ public static class AiServiceCollectionExtensions
                 options,
                 (provider, apiKey) => new RetryingChatClient(
                     AiClientFactory.CreateChatClient(provider, apiKey),
-                    new AiRetryPolicy(options.Retry, retryLogger)),
+                    new AiRetryPolicy(options.Retry, retryLogger),
+                    provider.ChatModel),
                 (providerName, reason) => chatLogger.LogWarning("Skipping AI fallback provider {Provider}: {Reason}", providerName, reason));
 
             return new FallbackChatClient(attempts, chatLogger);
@@ -43,7 +44,8 @@ public static class AiServiceCollectionExtensions
                 options,
                 (provider, apiKey) => new RetryingEmbeddingGenerator(
                     AiClientFactory.CreateEmbeddingGenerator(provider, apiKey),
-                    new AiRetryPolicy(options.Retry, retryLogger)),
+                    new AiRetryPolicy(options.Retry, retryLogger),
+                    provider.EmbeddingModel),
                 (providerName, reason) => embeddingLogger.LogWarning("Skipping AI embedding fallback provider {Provider}: {Reason}", providerName, reason));
 
             return new FallbackEmbeddingGenerator(attempts, embeddingLogger);

@@ -6,11 +6,13 @@ public sealed class RetryingChatClient : IChatClient
 {
     private readonly IChatClient _innerClient;
     private readonly AiRetryPolicy _policy;
+    private readonly string? _target;
 
-    public RetryingChatClient(IChatClient innerClient, AiRetryPolicy policy)
+    public RetryingChatClient(IChatClient innerClient, AiRetryPolicy policy, string? target = null)
     {
         _innerClient = innerClient;
         _policy = policy;
+        _target = target;
     }
 
     public Task<ChatResponse> GetResponseAsync(
@@ -23,7 +25,8 @@ public sealed class RetryingChatClient : IChatClient
         return _policy.ExecuteAsync(
             "chat",
             token => _innerClient.GetResponseAsync(materialized, options, token),
-            cancellationToken);
+            cancellationToken,
+            _target);
     }
 
     public IAsyncEnumerable<ChatResponseUpdate> GetStreamingResponseAsync(
