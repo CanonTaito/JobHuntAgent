@@ -132,6 +132,16 @@ $env:AI__FallbackProviders__1 = "ollama"
 
 A request works through the primary provider's keys first, then each fallback in order. It moves on after a key exhausts its retries or hits a `401`/`403`, and stops on a permanent failure such as `400`. A listed fallback with no key is skipped with a warning, so only providers you have actually configured are used. The primary provider must still be usable at startup. Embeddings follow the same chain; a fallback without an embedding model (Groq, for example) is skipped with a warning. Both texts of a match score are embedded in a single request, so a failover can never mix vectors from two different embedding models.
 
+In `.env` the separator is `:`, so a primary cloud provider with a local fallback looks like:
+
+```bash
+AI:Provider=gemini
+AI:FallbackProviders:0=groq
+AI:FallbackProviders:1=ollama
+```
+
+Cloud free tiers return `503` (model overloaded) under load, so a fallback is the difference between a slow success and a failure. When every provider fails, `POST /api/applications/{id}/tailor` answers `503` with a JSON error describing the problem; a model that returns unparseable JSON after its retries gets `502`.
+
 ### Using OpenCode Zen instead of ollama
 
 1. Copy `.env.example` to `.env` (gitignored) and set your key:
