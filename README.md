@@ -95,15 +95,15 @@ All AI settings live under the `AI` section of `src/JobHunt.Api/appsettings.json
 
 The shipped default is `ollama` (`gemma3` for chat, `nomic-embed-text` for embeddings). Any OpenAI-compatible provider can be added as another `AI:Providers` entry and selected with `AI__Provider=<name>`.
 
-Chat and embedding calls retry transient failures (HTTP `429`, `5xx`, network and timeout errors) with exponential backoff, honouring a `Retry-After` header when the provider sends one. Permanent failures (`400`, `401`, `403`, and other `4xx`) fail immediately. The OpenAI SDK's own retry policy is disabled so this backoff is the single retry layer.
+Chat and embedding calls retry transient failures (HTTP `429`, `5xx`, network and timeout errors) with exponential backoff, honouring a `Retry-After` header when the provider sends one. Authentication failures (`401`/`403`) and a `404` (a model the provider no longer serves) skip straight to the next provider, while other `4xx` failures (`400`, `422`) fail immediately. The OpenAI SDK's own retry policy is disabled so this backoff is the single retry layer.
 
-Match scoring normally runs as a tool-calling agent. Some chat models cannot call tools, so a provider marked `SupportsTools: false` automatically switches match scoring to a prompt-only agent that sends the redacted profile in the message and parses the JSON reply. The shipped `ollama` entry is marked this way because `gemma3` rejects tool calls; swap in a tool-capable model (see above) and flip the flag back on.
+Match scoring normally runs as a tool-calling agent. Some chat models cannot call tools, so a provider marked `SupportsTools: false` automatically switches match scoring to a prompt-only agent that sends the redacted profile in the message and parses the JSON reply. The shipped `ollama` entry is marked this way because `gemma3` rejects tool calls; swap in a tool-capable model (see above) and flip the flag back on. The shipped `gemini` entry is also marked `SupportsTools: false`: the tool-calling path issues several chat calls per job, which exhausts the free tier quickly, so scoring uses the single-call prompt-only agent instead.
 
 | Provider | Chat model | Embeddings | Key (`.env`) |
 |----------|-----------|------------|--------------|
 | `ollama` (default) | `gemma3` | `nomic-embed-text` | — (local) |
 | `gemini` | `gemini-2.5-flash` | `gemini-embedding-001` | `GEMINI_API_KEY` |
-| `groq` | `llama-3.3-70b-versatile` | — | `GROQ_API_KEY` |
+| `groq` | `openai/gpt-oss-120b` | — | `GROQ_API_KEY` |
 | `zen` | `big-pickle` | `text-embedding-3-small` | `OPENCODE_ZEN_KEY` |
 
 ### Provider secrets in `.env`

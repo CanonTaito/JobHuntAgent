@@ -51,14 +51,14 @@ public sealed class ShippedAiConfigTests
     }
 
     [Fact]
-    public void Marks_the_shipped_ollama_entry_as_tool_incapable()
+    public void Marks_the_shipped_ollama_and_gemini_entries_as_tool_incapable()
     {
         var options = LoadShippedOptions();
 
         Assert.False(AiProviderResolver.Resolve(options).SupportsTools);
 
         options.Provider = "gemini";
-        Assert.True(AiProviderResolver.Resolve(options).SupportsTools);
+        Assert.False(AiProviderResolver.Resolve(options).SupportsTools);
     }
 
     [Fact]
@@ -82,7 +82,7 @@ public sealed class ShippedAiConfigTests
 
         var provider = AiProviderResolver.Resolve(options);
         Assert.Equal("https://api.groq.com/openai/v1", provider.Endpoint);
-        Assert.Equal("llama-3.3-70b-versatile", provider.ChatModel);
+        Assert.Equal("openai/gpt-oss-120b", provider.ChatModel);
         Assert.True(string.IsNullOrWhiteSpace(provider.EmbeddingModel));
 
         Assert.Throws<InvalidOperationException>(() => AiProviderResolver.ResolveEmbedding(options));
