@@ -8,6 +8,8 @@ public sealed record DiscoveryReport
 
     public int Skipped { get; init; }
 
+    public int Failed { get; init; }
+
     public IReadOnlyList<DiscoveryItem> Items { get; init; } = [];
 }
 

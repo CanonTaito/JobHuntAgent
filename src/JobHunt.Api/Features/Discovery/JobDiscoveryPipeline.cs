@@ -57,6 +57,7 @@ public sealed class JobDiscoveryPipeline
 
         var items = new List<DiscoveryItem>();
         var skipped = 0;
+        var failed = 0;
 
         foreach (var listing in listings)
         {
@@ -72,64 +73,82 @@ public sealed class JobDiscoveryPipeline
             listingActivity?.SetTag("job.title", listing.Title);
             listingActivity?.SetTag("job.company", listing.Company);
 
-            var report = await _scorer.ScoreAsync(listing.Description, ct);
-            var salary = await _salaryInference.InferAsync(listing, query, ct);
-            var now = DateTimeOffset.UtcNow;
-
-            var application = new JobApplication
+            try
             {
-                SourceId = listing.Id,
-                Source = listing.Source,
-                Title = listing.Title,
-                Company = listing.Company,
-                Location = listing.Location,
-                WorkModel = listing.WorkModel,
-                Url = listing.Url,
-                Description = listing.Description,
-                SalaryMin = listing.SalaryMin,
-                SalaryMax = listing.SalaryMax,
-                SalaryCurrency = listing.SalaryCurrency,
-                SalaryBand = salary.Band?.Label,
-                SalarySource = salary.Source,
-                Status = JobApplicationStatus.Scored,
-                OverallScore = report.Overall,
-                SimilarityScore = report.Similarity,
-                SkillsScore = report.Skills,
-                SeniorityScore = report.Seniority,
-                FitScore = report.Fit,
-                MatchSummary = report.Summary,
-                PostedAt = listing.PostedAt,
-                DiscoveredAt = now,
-                UpdatedAt = now,
-            };
+                var report = await _scorer.ScoreAsync(listing.Description, ct);
+                var salary = await _salaryInference.InferAsync(listing, query, ct);
+                var now = DateTimeOffset.UtcNow;
 
-            db.Applications.Add(application);
-            await db.SaveChangesAsync(ct);
-            seen.Add((listing.Source, listing.Id));
+                var application = new JobApplication
+                {
+                    SourceId = listing.Id,
+                    Source = listing.Source,
+                    Title = listing.Title,
+                    Company = listing.Company,
+                    Location = listing.Location,
+                    WorkModel = listing.WorkModel,
+                    Url = listing.Url,
+                    Description = listing.Description,
+                    SalaryMin = listing.SalaryMin,
+                    SalaryMax = listing.SalaryMax,
+                    SalaryCurrency = listing.SalaryCurrency,
+                    SalaryBand = salary.Band?.Label,
+                    SalarySource = salary.Source,
+                    Status = JobApplicationStatus.Scored,
+                    OverallScore = report.Overall,
+                    SimilarityScore = report.Similarity,
+                    SkillsScore = report.Skills,
+                    SeniorityScore = report.Seniority,
+                    FitScore = report.Fit,
+                    MatchSummary = report.Summary,
+                    PostedAt = listing.PostedAt,
+                    DiscoveredAt = now,
+                    UpdatedAt = now,
+                };
 
-            _metrics.ApplicationDiscovered(listing.Source);
-            listingActivity?.SetTag("job.overall_score", report.Overall);
-            listingActivity?.SetTag("job.salary_band", application.SalaryBand);
-            listingActivity?.SetTag("job.salary_source", application.SalarySource.ToString());
+                db.Applications.Add(application);
+                await db.SaveChangesAsync(ct);
+                seen.Add((listing.Source, listing.Id));
 
-            items.Add(new DiscoveryItem
+                _metrics.ApplicationDiscovered(listing.Source);
+                listingActivity?.SetTag("job.overall_score", report.Overall);
+                listingActivity?.SetTag("job.salary_band", application.SalaryBand);
+                listingActivity?.SetTag("job.salary_source", application.SalarySource.ToString());
+
+                items.Add(new DiscoveryItem
+                {
+                    ApplicationId = application.Id,
+                    SourceId = listing.Id,
+                    Title = listing.Title,
+                    Company = listing.Company,
+                    Overall = report.Overall,
+                    SalaryBand = application.SalaryBand,
+                    Status = application.Status.ToString(),
+                });
+            }
+            catch (OperationCanceledException) when (ct.IsCancellationRequested)
             {
-                ApplicationId = application.Id,
-                SourceId = listing.Id,
-                Title = listing.Title,
-                Company = listing.Company,
-                Overall = report.Overall,
-                SalaryBand = application.SalaryBand,
-                Status = application.Status.ToString(),
-            });
+                throw;
+            }
+            catch (Exception exception)
+            {
+                failed++;
+                listingActivity?.SetTag("job.failed", true);
+                _logger.LogWarning(
+                    exception,
+                    "Failed to score listing {Source}/{Id}; continuing with the rest of the run.",
+                    listing.Source,
+                    listing.Id);
+            }
         }
 
         _logger.LogInformation(
-            "Discovery via {Source}: {Discovered} discovered, {Scored} scored, {Skipped} skipped",
-            _source.Name, listings.Count, items.Count, skipped);
+            "Discovery via {Source}: {Discovered} discovered, {Scored} scored, {Failed} failed, {Skipped} skipped",
+            _source.Name, listings.Count, items.Count, failed, skipped);
 
         activity?.SetTag("discovery.discovered", listings.Count);
         activity?.SetTag("discovery.scored", items.Count);
+        activity?.SetTag("discovery.failed", failed);
         activity?.SetTag("discovery.skipped", skipped);
 
         return new DiscoveryReport
@@ -137,6 +156,7 @@ public sealed class JobDiscoveryPipeline
             Discovered = listings.Count,
             Scored = items.Count,
             Skipped = skipped,
+            Failed = failed,
             Items = items,
         };
     }

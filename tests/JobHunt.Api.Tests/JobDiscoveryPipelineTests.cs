@@ -56,10 +56,35 @@ public sealed class JobDiscoveryPipelineTests
         Assert.Equal(1, await db.Applications.CountAsync());
     }
 
+    [Fact]
+    public async Task Continues_and_reports_when_a_listing_fails_to_score()
+    {
+        var source = new FilteringJobSource(
+        [
+            (Listing("job-1", 150_000, 185_000), 150_000, 185_000),
+            (Listing("job-2", 130_000, 160_000), 130_000, 160_000),
+        ]);
+        using var dbFactory = new TestDbContextFactory();
+        var pipeline = BuildPipeline(source, dbFactory, new FlakyMatchScorer(overall: 80));
+
+        var report = await pipeline.RunAsync(10, CancellationToken.None);
+
+        Assert.Equal(2, report.Discovered);
+        Assert.Equal(1, report.Scored);
+        Assert.Equal(1, report.Failed);
+        Assert.Equal("job-2", Assert.Single(report.Items).SourceId);
+
+        await using var db = dbFactory.CreateDbContext();
+        Assert.Equal(1, await db.Applications.CountAsync());
+    }
+
     private static JobDiscoveryPipeline BuildPipeline(FilteringJobSource source, TestDbContextFactory dbFactory, int overall) =>
+        BuildPipeline(source, dbFactory, new StubMatchScorer(overall));
+
+    private static JobDiscoveryPipeline BuildPipeline(FilteringJobSource source, TestDbContextFactory dbFactory, IMatchScorer scorer) =>
         new(
             source,
-            new StubMatchScorer(overall),
+            scorer,
             new SalaryBandInference(source),
             new CandidateProfile(),
             dbFactory,
@@ -89,5 +114,23 @@ public sealed class JobDiscoveryPipelineTests
                 Fit = overall,
                 Summary = "ok",
             });
+    }
+
+    private sealed class FlakyMatchScorer(int overall) : IMatchScorer
+    {
+        private int _calls;
+
+        public Task<MatchReport> ScoreAsync(string jobDescription, CancellationToken ct) =>
+            _calls++ == 0
+                ? throw new InvalidOperationException("provider unavailable")
+                : Task.FromResult(new MatchReport
+                {
+                    Overall = overall,
+                    Similarity = overall,
+                    Skills = overall,
+                    Seniority = overall,
+                    Fit = overall,
+                    Summary = "ok",
+                });
     }
 }

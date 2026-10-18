@@ -80,6 +80,22 @@ builder.Services.AddHealthChecks()
 
 var app = builder.Build();
 
+app.Use(async (context, next) =>
+{
+    try
+    {
+        await next();
+    }
+    catch (Exception exception) when (AiErrorClassifier.ProviderFailureStatusCode(exception) is { } status)
+    {
+        context.Response.StatusCode = status;
+        await context.Response.WriteAsJsonAsync(new
+        {
+            error = "The AI provider could not complete the request. Check the provider configuration and API keys, or configure a fallback provider with AI:FallbackProviders.",
+        });
+    }
+});
+
 var contextFactory = app.Services.GetRequiredService<IDbContextFactory<JobHuntDbContext>>();
 await using (var db = contextFactory.CreateDbContext())
 {
@@ -173,7 +189,21 @@ app.MapPost("/api/resume", async (HttpRequest request, ResumeTextExtractor extra
 }).DisableAntiforgery();
 
 app.MapPost("/api/discover", async (JobDiscoveryPipeline pipeline, int? max, CancellationToken ct) =>
-    Results.Ok(await pipeline.RunAsync(max ?? 5, ct)));
+{
+    var report = await pipeline.RunAsync(max ?? 5, ct);
+
+    if (report.Scored == 0 && report.Failed > 0)
+    {
+        return Results.Json(
+            new
+            {
+                error = "Every listing failed to score. Check the AI provider configuration and API keys, or configure a fallback provider with AI:FallbackProviders.",
+            },
+            statusCode: StatusCodes.Status503ServiceUnavailable);
+    }
+
+    return Results.Ok(report);
+});
 
 app.MapGet("/api/salary/validate", async (SalaryInferenceValidator validator, int? sample, CancellationToken ct) =>
     Results.Ok(await validator.ValidateAsync(sample ?? 10, ct)));
@@ -188,21 +218,6 @@ app.MapPost("/api/applications/{id:int}/tailor", async (int id, TailoringService
     catch (TailoringFormatException exception)
     {
         return Results.Json(new { error = exception.Message }, statusCode: StatusCodes.Status502BadGateway);
-    }
-    catch (Exception exception)
-    {
-        var status = AiErrorClassifier.ProviderFailureStatusCode(exception);
-        if (status is null)
-        {
-            throw;
-        }
-
-        return Results.Json(
-            new
-            {
-                error = "The AI provider could not complete the tailoring request. Check the provider status and API keys, or add a fallback with AI:FallbackProviders, then try again.",
-            },
-            statusCode: status.Value);
     }
 });
 
