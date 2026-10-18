@@ -54,8 +54,7 @@ public sealed class TailoringAgent
         matching this exact schema:
         {
           "resumeBullets": ["First tailored bullet.", "Second tailored bullet."],
-          "coverLetter": "The full cover letter as a single string.",
-          "tailoredProfile": { /* optional: full CandidateProfile JSON with the resume recreated */ }
+          "coverLetter": "The full cover letter as a single string."
         }
 
         Rules:
@@ -136,6 +135,6 @@ public sealed class TailoringAgent
         (wasEmpty
             ? "Your previous response was empty."
             : "Your previous response was not valid JSON matching the required schema.") +
-        " Reply with a single JSON object containing resumeBullets, coverLetter, and optionally tailoredProfile, and nothing else." +
+        " Reply with a single JSON object containing resumeBullets and coverLetter, and nothing else." +
         " The job description was:\n\n" + jobDescription;
 }

@@ -32,16 +32,15 @@ public static class TailoringJson
         var bullets = Clean(result.ResumeBullets);
         var coverLetter = result.CoverLetter?.Trim();
 
-        if ((bullets.Count == 0 || string.IsNullOrWhiteSpace(coverLetter)) && result.TailoredProfile is null)
+        if (bullets.Count == 0 || string.IsNullOrWhiteSpace(coverLetter))
         {
-            throw new TailoringFormatException("Model output was missing resume bullets/cover letter and did not include a tailored profile.");
+            throw new TailoringFormatException("Model output was missing resume bullets or the cover letter.");
         }
 
         return new TailoringDraft
         {
             ResumeBullets = bullets,
-            CoverLetter = coverLetter ?? string.Empty,
-            TailoredProfile = result.TailoredProfile,
+            CoverLetter = coverLetter,
         };
     }
 
@@ -67,7 +66,5 @@ public static class TailoringJson
         public IReadOnlyList<string>? ResumeBullets { get; init; }
 
         public string? CoverLetter { get; init; }
-
-        public JobHunt.Api.Features.Profile.CandidateProfile? TailoredProfile { get; init; }
     }
 }

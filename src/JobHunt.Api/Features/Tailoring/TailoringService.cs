@@ -10,17 +10,25 @@ namespace JobHunt.Api.Features.Tailoring;
 
 public sealed class TailoringService
 {
+    private static readonly JsonSerializerOptions SerializerOptions = new()
+    {
+        PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
+    };
+
     private readonly TailoringAgent _agent;
     private readonly PiiRedactor _redactor;
+    private readonly IProfileStore _profiles;
     private readonly IDbContextFactory<JobHuntDbContext> _contexts;
 
     public TailoringService(
         TailoringAgent agent,
         PiiRedactor redactor,
+        IProfileStore profiles,
         IDbContextFactory<JobHuntDbContext> contexts)
     {
         _agent = agent;
         _redactor = redactor;
+        _profiles = profiles;
         _contexts = contexts;
     }
 
@@ -38,31 +46,17 @@ public sealed class TailoringService
 
         var draft = await _agent.DraftAsync(application.Description, ct);
 
-        CandidateProfile? rehydratedProfile = null;
-        if (draft.TailoredProfile is not null)
-        {
-            // The agent returns a redacted profile (placeholders). Rehydrate by
-            // serializing to JSON, performing string-based rehydration, then
-            // deserializing back into the CandidateProfile model.
-            var json = JsonSerializer.Serialize(draft.TailoredProfile, new JsonSerializerOptions { PropertyNamingPolicy = JsonNamingPolicy.CamelCase });
-            var rehydratedJson = _redactor.Rehydrate(json);
-            rehydratedProfile = JsonSerializer.Deserialize<CandidateProfile>(rehydratedJson, new JsonSerializerOptions { PropertyNameCaseInsensitive = true, PropertyNamingPolicy = JsonNamingPolicy.CamelCase });
-        }
-
         var rehydrated = new TailoringDraft
         {
             ResumeBullets = draft.ResumeBullets.Select(_redactor.Rehydrate).ToList(),
             CoverLetter = _redactor.Rehydrate(draft.CoverLetter),
-            TailoredProfile = rehydratedProfile,
         };
+
+        var tailoredProfile = BuildTailoredProfile(await _profiles.GetAsync(ct), rehydrated.ResumeBullets);
 
         application.TailoredBullets = string.Join('\n', rehydrated.ResumeBullets);
         application.CoverLetter = rehydrated.CoverLetter;
-        if (rehydratedProfile is not null)
-        {
-            application.TailoredProfileJson = JsonSerializer.Serialize(rehydratedProfile, new JsonSerializerOptions { PropertyNamingPolicy = JsonNamingPolicy.CamelCase });
-        }
-        // Note: we return the full tailored profile in the response (if present).
+        application.TailoredProfileJson = JsonSerializer.Serialize(tailoredProfile, SerializerOptions);
         application.TailoredAt = DateTimeOffset.UtcNow;
         application.Status = JobApplicationStatus.Tailored;
         application.UpdatedAt = DateTimeOffset.UtcNow;
@@ -71,4 +65,9 @@ public sealed class TailoringService
         activity?.SetTag("tailoring.bullets", rehydrated.ResumeBullets.Count);
         return rehydrated;
     }
+
+    private static CandidateProfile BuildTailoredProfile(CandidateProfile profile, IReadOnlyList<string> resumeBullets) =>
+        resumeBullets.Count == 0
+            ? profile
+            : profile with { Highlights = resumeBullets };
 }
